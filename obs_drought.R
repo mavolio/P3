@@ -4,6 +4,8 @@ library(lme4)
 library(lmerTest)
 library(SPEI)
 
+theme_set(theme_bw(12))
+
 treats<-read.csv("C:/Users/mavolio2/Dropbox/Konza Research/p-cubed/Analyses/July 2015 Analyses/PPlot_PlotList.csv")
 
 p2<-read.csv("C:/Users/mavolio2/Dropbox/Konza Research/pplots/Biomass/To use/Compiling Files in R/Biomass_2002_2019.csv")%>%
@@ -38,7 +40,7 @@ ggplot(data=subset(annprecip, year>2005&year<2020), aes(x=year, y=sppt))+
   scale_x_continuous(breaks=c(2006, 2008, 2010, 2012, 2014, 2016, 2018))
 
 
-#trying SPEI
+#calculating SPEI
 temp<-read.csv("C:/Users/mavolio2/Dropbox/Konza Research/P-cubed/AWE011.csv")%>%
   rename(month=RECMONTH,
          year=RECYEAR)%>%
@@ -51,7 +53,7 @@ temp2<-temp%>%
   group_by(year, month)%>%
   summarize(Tmed=median(tave))
 
-meant<-mean(temp2$Tmed)
+mean<-mean(temp2$Tmed)
 
 
 knz<-ppt%>%
@@ -61,8 +63,7 @@ knz<-ppt%>%
          month=as.integer(month))%>%
   left_join(temp2)%>%
   na.omit%>%
-  arrange(year, month)%>%
-  filter(year>2004)
+  arrange(year, month)
 
 knz$PET <- thornthwaite(knz$Tmed, 39.10216)
 knz$BAL <- knz$ppt-knz$PET
@@ -122,6 +123,7 @@ hist(log(drt$anpp))
 
 m1<-lmer(log(anpp)~nitro*phos*as.factor(calendar_year) + (1|plotnum), data=subset(drt, drtint=="2012"))
 anova(m1)
+summary(m1)
 
 m2<-lmer(log(anpp)~as.factor(calendar_year)*nitro*phos + (1|plotnum), data=subset(drt, drtint=="2018"))
 anova(m2)
@@ -188,7 +190,7 @@ ggplot(data=toplot3, aes(x=as.factor(calendar_year), y=manpp, color=Trt, group=T
 burn<-drt%>% 
    mutate(fire=ifelse(calendar_year %in% c(2007, 2009, 2011, 2013, 2015, 2017, 2019), 1, 0))
 
-burnsig<-lmer(log(anpp)~fire*as.factor(calendar_year) + (1|plotnum), data=burn)
+burnsig<-lmer(log(anpp)~fire + (1|plotnum), data=burn)
 anova(burnsig)
 
 res<-as.data.frame(resid(burnsig))%>%
@@ -202,37 +204,101 @@ anova(m3)
 m4<-lmer(residual~as.factor(calendar_year)*nitro*phos + (1|plotnum), data=subset(res, drtint=="2018"))
 anova(m4)
 
-##compare drought years to long term non-burned years only. the 2012 and 2018 drought reduced biomass. 2018 makes more sense. Not sure how to do stats on this. the recovery was not there in 2013 but did recover in 2018
+toplot.res<-res%>%
+  group_by(calendar_year, drt, drtint, nitro, phos, Trt)%>%
+  summarize(manpp=mean(residual), sd=sd(residual), n=length(residual))%>%
+  mutate(se=sd/sqrt(n))
+
+ggplot(data=toplot.res, aes(x=as.factor(calendar_year), y=manpp, color=Trt, group=Trt))+
+  geom_point()+
+  geom_line()+
+  geom_errorbar(aes(ymin=manpp-se, ymax=manpp+se), width=0.2)+
+  facet_wrap(~drtint, scales="free_x")
+
+##compare drought years to long term non-burned years only. the 2012 and 2018 drought reduced biomass. 2018 makes more sense. Not sure how to do stats on this. the recovery was not there in 2013 but did recover in 2018. compare each plot to its long term average and see that way. then do regular two-way anova.
 unburnmean<-burn%>%
   filter(fire==0&calendar_year!=2012|calendar_year!=2018)%>%
-  group_by(nitro, phos, Trt)%>%
+  group_by(nitro, phos, Trt, plotnum)%>%
   summarise(mean=mean(anpp))
 
-compareburn<-burn%>%
+compareunburn<-burn%>%
   filter(drt=="drt")%>%
-  group_by(calendar_year, drtint, nitro, phos, Trt)%>%
-  summarise(dmean=mean(anpp))%>%
   left_join(unburnmean)%>%
-  mutate(resist=(dmean-mean)/mean)
+  mutate(resist=(anpp-mean)/mean)
 
-ggplot(data=compareburn, aes(x=Trt, y=resist))+
+summary(aov(resist~nitro*phos, data=subset(compareunburn, drtint=2018)))
+TukeyHSD(aov(resist~Trt, data=subset(compareunburn, drtint=2018)))
+with(subset(compareunburn, drtint==2018&Trt=="Control"), t.test(resist, mu=0))#no
+with(subset(compareunburn, drtint==2018&Trt=="N"), t.test(resist, mu=0))#yes
+with(subset(compareunburn, drtint==2018&Trt=="P"), t.test(resist, mu=0))#yes
+with(subset(compareunburn, drtint==2018&Trt=="P&N"), t.test(resist, mu=0))#yes
+
+pvalresist18<-c(0.101,0.01631,0.000575, 0.004637)
+p.adjust(pvalresist18, method = "BH")
+
+
+summary(aov(resist~Trt, data=subset(compareunburn, drtint=2012)))
+TukeyHSD(aov(resist~Trt, data=subset(compareunburn, drtint=2012)))
+with(subset(compareunburn, drtint==2012&Trt=="Control"), t.test(resist, mu=0))#no
+with(subset(compareunburn, drtint==2012&Trt=="N"), t.test(resist, mu=0))#no
+with(subset(compareunburn, drtint==2012&Trt=="P"), t.test(resist, mu=0))#no
+with(subset(compareunburn, drtint==2012&Trt=="P&N"), t.test(resist, mu=0))#yes sig goes away with mult correction
+
+pvalresist12<-c(0.1938,0.248,0.414, 0.0474)
+p.adjust(pvalresist12, method = "BH")
+
+compplot<-compareunburn%>%
+  group_by(calendar_year, drtint, nitro, phos, Trt)%>%
+  summarise(mean=mean(resist), sd=sd(resist), n=length(resist))%>%
+  mutate(se=sd/sqrt(n))
+
+ggplot(data=compplot, aes(x=Trt, y=mean))+
   geom_bar(stat="identity")+
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.2)+
   facet_wrap(~drtint)+
   ggtitle("Biomass reduction")
 
-
 burnmean<-burn%>%
-  filter(fire==1)%>%
-  group_by(nitro, phos, Trt)%>%
+  filter(fire==1, calendar_year!=2013&calendar_year!=2019)%>%
+  group_by(nitro, phos, Trt, plotnum)%>%
   summarise(mean=mean(anpp))
 
 compareburn<-burn%>%
   filter(drt=="post")%>%
-  group_by(calendar_year, drtint, nitro, phos, Trt)%>%
-  summarise(pmean=mean(anpp))%>%
   left_join(burnmean)%>%
-  mutate(recover=(pmean-mean)/mean)
+  mutate(recover=(mean-anpp)/anpp)
+  
+  
+compplot2<-compareburn%>%
+  group_by(calendar_year, drtint, nitro, phos, Trt)%>%
+  summarise(mean=mean(recover), sd=sd(recover), n=length(recover))%>%
+  mutate(se=sd/sqrt(n))
 
-ggplot(data=compareburn, aes(x=Trt, y=recover))+
+ggplot(data=compplot2, aes(x=Trt, y=mean))+
   geom_bar(stat="identity")+
-  facet_wrap(~drtint)
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.2)+
+  facet_wrap(~drtint)+
+  ggtitle("Biomass gains")
+
+
+summary(aov(recover~Trt, data=subset(compareburn, drtint=2018)))#no sig diff
+
+with(subset(compareburn, drtint==2018&Trt=="Control"), t.test(recover, mu=0))#yes
+with(subset(compareburn, drtint==2018&Trt=="N"), t.test(recover, mu=0))#no
+with(subset(compareburn, drtint==2018&Trt=="P"), t.test(recover, mu=0))#yes
+with(subset(compareburn, drtint==2018&Trt=="P&N"), t.test(recover, mu=0))#no
+
+pvalrecov18<-c(0.02345,0.7411,0.006684, 0.7415)
+p.adjust(pvalrecov18, method = "BH")
+
+
+summary(aov(recover~Trt, data=subset(compareburn, drtint=2012)))
+#no sig
+with(subset(compareburn, drtint==2012&Trt=="Control"), t.test(recover, mu=0))#no
+with(subset(compareburn, drtint==2012&Trt=="N"), t.test(recover, mu=0))#no
+with(subset(compareburn, drtint==2012&Trt=="P"), t.test(recover, mu=0))#no
+with(subset(compareburn, drtint==2012&Trt=="P&N"), t.test(recover, mu=0))#no
+
+pvalrecov12<-c(0.7454,0.287,0.02058, 0.8093)
+p.adjust(pvalrecov12, method = "BH")
+
