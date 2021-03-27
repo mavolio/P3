@@ -12,7 +12,7 @@ my.wd<-setwd("C:/Users/mavolio2/Dropbox/Konza Research")
 
 #read in data
 pplotcomp<-read.csv(paste(my.wd, "/pplots/Sppcomp/Species Comp_to Use/Compiling Datasets in R/Spp_Data_2002_2019.csv", sep = ""))%>%
-  filter(calendar_year>2005)%>%
+  filter(calendar_year>2009&calendar_year<2016)%>%
   filter(treatment=="N1P0"|treatment=="N2P0"|treatment=="N1P3"|treatment=="N2P3")
 
 cattraits<-read.csv(paste(my.wd, "/pplots/traits_2021.csv", sep=""))%>%
@@ -38,14 +38,14 @@ compwide<-ave%>%
 plots<-compwide[,1:2]
 
 #run nmds
-mds<-metaMDS(compwide[,3:97])
+mds<-metaMDS(compwide[,3:69])
 mds
 
 #extract NMDS coordinates and bind to plot info for graphs
 #the label step adds the label for the first and last year of data
 scores<-plots%>%
   bind_cols(as.data.frame(mds$points))%>%
-  mutate(label=ifelse(calendar_year=="2006"|calendar_year=="2019", as.character(calendar_year), ""))
+  mutate(label=ifelse(calendar_year==2010|calendar_year==2015, as.character(calendar_year),""))
 
 #make figure with first and last year labeled and path between points connected
 NMDS<-
@@ -59,10 +59,10 @@ ggplot(data=scores, aes(x=MDS1, y=MDS2, color=treatment, label=label))+
   xlab("NMDS1")
 
 #permanova
-adonis(compwide[3:97]~compwide$treatment)
+adonis(compwide[3:69]~compwide$treatment)
 
 #perm dispersion
-dist<-vegdist(compwide[3:97])
+dist<-vegdist(compwide[3:69])
 betadisp<-betadisper(dist,compwide$treatment,type="centroid")
 permutest(betadisp)
 
@@ -82,7 +82,7 @@ racave<-ave%>%
   separate(genus_species, into=c("genus", "species"), sep="_")%>%
   mutate(genera=toupper(substr(genus, 1, 1)),
          sp=paste(genera, species, sep=". "))%>%
-  mutate(name=ifelse(rank<6, sp, ""))
+  mutate(name=ifelse(rank<4, sp, ""))
 
 #make new labels for facet_wrap step  
 collabel<-c(
@@ -97,7 +97,7 @@ ggplot(data=racave, aes(x=rank, y=mabund, label=name))+
   geom_line()+
   geom_point(aes(color=trait_cat), size=2)+
   scale_color_manual(name="Functional Type", values=c("forestgreen", "chartreuse3", "green", "darkblue", "lightblue", "deepskyblue"), breaks = c("C3 Gram.", "C4 Gram.", "Annual Gram.","Non-N-Fixing Forb", "N-Fixing Forb", "Annual Forb"))+
-  geom_text_repel(max.overlaps = 10)+
+  geom_text_repel(max.overlaps = 8, size=3)+
   facet_wrap(~treatment, labeller = labeller(treatment=collabel))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   ylab("Abundance")+
