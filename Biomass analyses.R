@@ -1,9 +1,11 @@
 library(tidyverse)
-library(vegan)
 library(lme4)
 library(lmerTest)
 library(nlme)
+library(emmeans)
+library(car)
 
+theme_set(theme_bw(20))
 
 #make figure with all DP and ANPP and say bad blow in 2010/2011. We think it is questionable in those years and had edge effects. Make years continuous on x-axis and note with vertical line drought verus non-drought years.
 
@@ -44,16 +46,21 @@ hist(log(biomass$grass))
 hist(log(biomass$forb))
 
 
-##double check nested plots design with a fixed factor here I am nestling drought within plotnum (drought/plotnum).
+##double check nested plots design with a fixed factor here I am nestling drought within plotnum
 
-m.d <- lmer(log(anpp)~nitro*phos*drought*as.factor(calendar_year) + (1|plotnum), data=subset(biomass, treat=="Drought years"))
+m.d <- lmer(log(anpp)~Trt*drought*as.factor(calendar_year) + (1|plotnum), data=subset(biomass, treat=="Drought years"))
 summary(m.d)
-anova(m.d)
+anova(m.d, ddf="Kenward-Roger")
 md<-anova(m.d)
 
-m.r <- lmer(log(anpp)~nitro*phos*drought*as.factor(calendar_year) + (1|plotnum), data=subset(biomass, treat=="Recovery years"))
+#doing contrasts - not doing these as there are no interactions i am interested in
+emmeans(m.d, pairwise~drought|as.factor(calendar_year), adjust="holm")
+
+m.r <- lmer(log(anpp)~Trt*drought*as.factor(calendar_year) + (1|plotnum/drought), data=subset(biomass, treat=="Recovery years"))
 summary(m.r)
-anova(m.r)
+anova(m.r, ddf="Kenward-Roger")
+
+emmeans(m.r, pairwise~drought|as.factor(calendar_year), adjust="holm")
 
 biomave<-biomass%>%
   group_by(calendar_year, drought, treat, Trt)%>%
@@ -89,16 +96,38 @@ ggplot(data=biomasstoplot, aes(x=calendar_year, y=mbio, color=Trt, shape=drought
   geom_vline(xintercept = 3.5)
 
 
+#for ESA
+
+ggplot(data=subset(biomasstoplot, type=="Clipping"), aes(x=calendar_year, y=mbio, color=Trt, shape=drought))+
+  geom_point(aes(group=Trt), size=5, position=position_dodge(0.5))+
+  scale_color_manual(name="Treatment", values=c("Black", "Blue", "Red", "Purple"), breaks=c("Control", "P", "N", "P&N"), labels=c("Control", "P", "N", "N+P"))+
+  scale_shape_manual(name="Droughted", values=c(19, 17),labels=c("No", "Yes"))+
+  geom_errorbar(aes(ymin=mbio-se, ymax=mbio+se, group=Trt),position=position_dodge(0.5), width=.1)+
+  ylab(expression(paste("ANPP (g ","m"^"-2",")")))+
+  xlab("Year")+
+  geom_vline(xintercept = 3.5)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  facet_wrap(~Trt, scales="free_y")+
+  geom_line(aes(group=drought))
+
+
++
+  annotate("text", x=3, y=700, label="*", size=8)+
+  annotate("text", x=4, y=900, label="*", size=8)+
+  annotate("text", x=5, y=900, label="*", size=8)
+
+
 ###for grasses
-m.dg <- lmer(log(grass)~nitro*phos*drought*as.factor(calendar_year) + (1|plotnum), data=subset(biomass, treat=="Drought years"))
+m.dg <- lmer(log(grass)~Trt*drought*as.factor(calendar_year) + (1|plotnum), data=subset(biomass, treat=="Drought years"))
 summary(m.dg)
-anova(m.dg)
+anova(m.dg, ddf="Kenward-Roger")
+emmeans(m.dg, pairwise~drought|as.factor(calendar_year), adjust="holm")
 
 mdg<-anova(m.dg)
 p.mdg<-mdg$`Pr(>F)`
 
-m.rg <- lmer(log(grass)~nitro*phos*drought*as.factor(calendar_year) + (1|plotnum), data=subset(biomass, treat=="Recovery years"))
-anova(m.rg)
+m.rg <- lmer(log(grass)~Trt*drought*as.factor(calendar_year) + (1|plotnum), data=subset(biomass, treat=="Recovery years"))
+anova(m.rg, ddf="Kenward-Roger")
 
 biomaveg<-biomass%>%
   group_by(calendar_year, drought, treat, Trt)%>%
@@ -111,13 +140,13 @@ biomaveg<-biomass%>%
 
 hist(biomass$forb)
 ###for forbs
-m.df <- lmer(log(forb+1)~nitro*phos*drought*as.factor(calendar_year) + (1|plotnum), data=subset(biomass, treat=="Drought years"))
-anova(m.df)
+m.df <- lmer(log(forb+1)~Trt*drought*as.factor(calendar_year) + (1|plotnum), data=subset(biomass, treat=="Drought years"))
+anova(m.df, ddf="Kenward-Roger")
 
-m.rf <- lmer(log(forb+1)~nitro*phos*drought*calendar_year + (1|plotnum), data=subset(biomass, treat=="Recovery years"))
-anova(m.rf)
+m.rf <- lmer(log(forb+1)~Trt*drought*calendar_year + (1|plotnum), data=subset(biomass, treat=="Recovery years"))
+anova(m.rf, ddf="Kenward-Roger")
 summary(m.rf)
-ls_means(m.rf, pairwise = T)
+emmeans(m.rf, pairwise~drought|Trt, adjust="holm")
 
 biomavetype<-biomass%>%
   group_by(calendar_year, drought, treat, Trt)%>%
@@ -132,11 +161,14 @@ ggplot(data=biomavetype, aes(x=calendar_year, y=mbio, color=Trt, shape=drought, 
   geom_point(size=5, position = position_dodge(0.5))+
   scale_color_manual(name="Treatment", values=c("Black", "Blue", "Red", "Purple"), breaks=c("Control", "P", "N", "P&N"), labels=c("Control", "P", "N", "N+P"))+
   scale_shape_manual(name="Droughted", values=c(19, 17),labels=c("No", "Yes"))+
-  geom_errorbar(aes(ymin=mbio-(1.96*se), ymax=mbio+(1.96*se)), position=position_dodge(0.5), width=.2)+
+  geom_errorbar(aes(ymin=mbio-se, ymax=mbio+se), position=position_dodge(0.5), width=.2)+
   ylab(expression(paste("Biomass (g ","m"^"-2",")")))+
-  facet_wrap(~type, scales="free", ncol=1)+
+  facet_grid(type~Trt, scales="free")+
   geom_vline(xintercept=3.5)+
-  xlab("Year")
+  xlab("Year")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90))+
+  geom_line(aes(group=drought))
+  
 
 biomavef<-biomass%>%
   filter(treat=="Recovery years")%>%
@@ -150,15 +182,21 @@ ggplot(data=biomavef, aes(x=Trt, y=mbio, fill=drought))+
   geom_bar(stat="identity", position=position_dodge())+
   scale_fill_manual(name="Droughted", values=c("Blue", "Orange"), labels=c("No", "Yes"))+
   geom_errorbar(aes(ymin=mbio-se, ymax=mbio+se),position=position_dodge(0.9),width=.2)+
-  ylab(expression(paste("ANPP (g ","m"^"-2",")")))+
-  xlab("Year")
+  ylab(expression(paste("Forb ANPP (g ","m"^"-2",")")))+
+  xlab("Year")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+
+######
+
 
 
 ###resist/recovery framework is not the correct approach we do not think.
 biomassdiff<-biomass%>%
   select(-grass, -forb)%>%
   spread(drought, anpp)%>%
-  mutate(logrr=log(y/n))%>%
+  mutate(logrr=log(y/n),
+         pd=(n-y)/y)%>%
   #filter(calendar_year!=2010)%>%
   na.omit()%>%
   mutate(trtyr=paste(calendar_year, Trt, sep="_"))
@@ -167,11 +205,16 @@ hist(biomassdiff$logrr)
 
 m.d <- lmer(logrr~nitro*phos*as.factor(calendar_year) + (1|plotnum), data=subset(biomassdiff, treat=="Drought years"))
 summary(m.d)
+anova(m.d)
 
 summary(aov(logrr~nitro*phos, data=subset(biomassdiff, calendar_year==2012)))
 
 m.d <- lmer(logrr~nitro*phos*as.factor(calendar_year) + (1|plotnum), data=subset(biomassdiff, treat=="Recovery years"))
 summary(m.d)
+
+
+
+
 
 ltrtyr<-unique(biomassdiff$trtyr)
 
@@ -290,3 +333,62 @@ ggplot(data=tograph.r, aes(x=year, y=anpp.mn, color=Trt, shape=type))+
   geom_errorbar(aes(ymax=anpp.mn+anpp.se, ymin=anpp.mn-anpp.se), width=.2)+
   #scale_x_discrete(name="Water Treatment", label=c("Control","Drought"))+
   ylab(expression(paste("ANPP (g ","m"^"-2",")")))
+
+
+###linking biomass to community compositon
+##need to run lf code in community_analyses
+
+diff<-biomassdiff%>%
+  mutate(calendar_year=as.integer(as.character(calendar_year)))%>%
+  left_join(lf)%>%
+  filter(trait_cat!="NA", precip=="drought")
+
+ggplot(data=diff, aes(x=relcov, y=logrr))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  facet_wrap(~trait_cat, scales='free')
+
+with(subset(diff, trait_cat=="Annual Forb"), cor.test(logrr, relcov))#notsig
+with(subset(diff, trait_cat=="Annual Gram."), cor.test(logrr, relcov))#not sig
+with(subset(diff, trait_cat=="C3 Gram."), cor.test(logrr, relcov))#not sig
+with(subset(diff, trait_cat=="C4 Gram."), cor.test(logrr, relcov))#sig - but will go away
+with(subset(diff, trait_cat=="N-Fixing Forb"), cor.test(logrr, relcov))#not sig
+with(subset(diff, trait_cat=="Non-N-Fixing Forb"), cor.test(logrr, relcov))#sig
+
+
+diff2<-biomassdiff%>%
+  mutate(calendar_year=as.integer(as.character(calendar_year)))%>%
+  left_join(lf2)%>%
+  filter(trait_cat!="NA", precip=="drought", treat=="Drought years")
+
+ggplot(data=diff2, aes(x=relcov, y=pd))+
+  geom_point(aes(color=Trt),size=3)+
+  geom_smooth(data=subset(diff2, trait_cat=="Forb"), method="lm", se=F, color="black")+
+  geom_smooth(data=subset(diff2, trait_cat=="Grass"), method="lm", se=F, color="black")+
+  facet_wrap(~trait_cat, scales='free')+
+  ylab("% Diff Control-Drought ANPP")+
+  xlab("Relative Cover of Functional Type")+
+  scale_color_manual(name="Treatment", breaks=c("Control", "P", "N", "P&N"), label=c("Control", "P", "N", "N+P"), values=c("black", "blue", "red", "purple"))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+with(subset(diff2, trait_cat=="Annual"), cor.test(pd, relcov))#notsig
+with(subset(diff2, trait_cat=="Forb"), cor.test(pd, relcov))#sig
+with(subset(diff2, trait_cat=="Grass"), cor.test(pd, relcov))#sig
+
+
+diff3<-biomassdiff%>%
+  mutate(calendar_year=as.integer(as.character(calendar_year)))%>%
+  left_join(lf2)%>%
+  filter(trait_cat!="NA", precip=="drought", treat=="Recovery years")
+
+ggplot(data=diff3, aes(x=relcov, y=pd))+
+  geom_point(aes(color=Trt),size=3)+
+  facet_wrap(~trait_cat, scales='free')+
+  ylab("% Diff Control-Drought ANPP")+
+  xlab("Relative Cover of Functional Type")+
+  scale_color_manual(name="Treatment", breaks=c("Control", "P", "N", "P&N"), label=c("Control", "P", "N", "N+P"), values=c("black", "blue", "red", "purple"))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+with(subset(diff3, trait_cat=="Annual"), cor.test(pd, relcov))#notsig
+with(subset(diff3, trait_cat=="Forb"), cor.test(pd, relcov))#notsig
+with(subset(diff3, trait_cat=="Grass"), cor.test(pd, relcov))#notsig
