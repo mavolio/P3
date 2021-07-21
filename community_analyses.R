@@ -211,12 +211,14 @@ ggplot(subset(meanlf, trt2=="Control"|trt2=="P&N"), aes(x=calendar_year, y=mean,
 
 ###overall fig
 lfoverall<-lf%>%
-  filter(Trt=="Control"&precip=="control")%>%
-  group_by(trait_cat)%>%
+  filter(Trt=="Control"|Trt=="P&N", precip=="control")%>%
+  group_by(Trt, trait_cat)%>%
   summarize(mean=mean(relcov), sd=sd(relcov), n=length(relcov))%>%
   mutate(se=sd/sqrt(n))%>%
   filter(trait_cat!="NA")%>%
   mutate(rank=rank(-mean))
+
+trtlab<-c(Control="Control", 'P&N'="N+P")
 
 ggplot(lfoverall, aes(x=rank, y=mean))+
   geom_line()+
@@ -224,7 +226,8 @@ ggplot(lfoverall, aes(x=rank, y=mean))+
   scale_color_manual(name="Functional Type", values=c("darkgreen", "chartreuse3", "green", "darkblue", "lightblue", "deepskyblue"), breaks = c("C4 Gram.", "C3 Gram.",  "Annual Gram.","Non-N-Fixing Forb", "N-Fixing Forb", "Annual Forb"))+
   xlab("Rank")+
   ylab("Relative Cover")+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  facet_wrap(~Trt, labeller = labeller(Trt=trtlab), ncol=1)
 
 lf2<-p3plotcomp%>%
   mutate(trait_cat=ifelse(life=="A", 'Annual', ifelse(form=="F"|form=="S", "Forb",
