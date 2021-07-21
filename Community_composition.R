@@ -5,7 +5,7 @@ library(tidyverse)
 library(ggrepel)
 library(gridExtra)
 
-theme_set(theme_bw(12))
+theme_set(theme_bw(20))
 
 #set wd
 my.wd<-setwd("C:/Users/mavolio2/Dropbox/Konza Research")
@@ -82,7 +82,7 @@ racave<-ave%>%
   separate(genus_species, into=c("genus", "species"), sep="_")%>%
   mutate(genera=toupper(substr(genus, 1, 1)),
          sp=paste(genera, species, sep=". "))%>%
-  mutate(name=ifelse(rank<4, sp, ""))
+  mutate(name=ifelse(rank<6, sp, ""))
 
 #make new labels for facet_wrap step  
 collabel<-c(
@@ -95,9 +95,9 @@ collabel<-c(
 rac<-
 ggplot(data=racave, aes(x=rank, y=mabund, label=name))+
   geom_line()+
-  geom_point(aes(color=trait_cat), size=2)+
-  scale_color_manual(name="Functional Type", values=c("forestgreen", "chartreuse3", "green", "darkblue", "lightblue", "deepskyblue"), breaks = c("C3 Gram.", "C4 Gram.", "Annual Gram.","Non-N-Fixing Forb", "N-Fixing Forb", "Annual Forb"))+
-  geom_text_repel(max.overlaps = 8, size=3)+
+  geom_point(aes(color=trait_cat), size=4)+
+  scale_color_manual(name="Functional Type", values=c("darkgreen", "chartreuse3", "green", "darkblue", "lightblue", "deepskyblue"), breaks = c("C4 Gram.", "C3 Gram.",  "Annual Gram.","Non-N-Fixing Forb", "N-Fixing Forb", "Annual Forb"))+
+  #geom_text_repel(max.overlaps = 10, size=5)+
   facet_wrap(~treatment, labeller = labeller(treatment=collabel))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   ylab("Abundance")+
@@ -105,4 +105,55 @@ ggplot(data=racave, aes(x=rank, y=mabund, label=name))+
 
 #bind both figures together.
 grid.arrange(NMDS, rac, ncol=2)
+
+#plot changes over time ESA talk
+
+allpp<-read.csv(paste(my.wd, "/pplots/Sppcomp/Species Comp_to Use/Compiling Datasets in R/Spp_Data_2002_2019.csv", sep = ""))%>%
+  filter(treatment=="N1P0"|treatment=="N2P0"|treatment=="N1P3"|treatment=="N2P3")
+
+cattraits<-read.csv(paste(my.wd, "/pplots/traits_2021.csv", sep=""))%>%
+  filter(Genus!="")%>%
+  select(Genus, Species, Annual.Peren.Bi, Forb.grass.shrub, C3.C4, N.fixer..Y.N...)%>%
+  mutate(genus_species=paste(tolower(Genus), Species, sep="_"))%>%
+  rename(lifespan=Annual.Peren.Bi,
+         growthform=Forb.grass.shrub,
+         photopath=C3.C4,
+         Nfix=N.fixer..Y.N...)%>%
+  select(-Genus, -Species)
+
+#get average cover of each species in a treatment for each year of the experiment (average over the plots)
+aveall<-allpp%>%
+  group_by(calendar_year, treatment, genus_species)%>%
+  summarize(mabund=mean(abundance))
+
+
                      
+#get average cover of each species in each treatment over all years (average over plots and years). 
+#join categorical triats and create trait categories
+ractime<-aveall%>%
+  left_join(cattraits)%>%
+  mutate(trait_cat=ifelse(growthform=="F"&lifespan=="A", "Annual Forb",
+                          ifelse(growthform=="G"&lifespan=="A", "Annual Gram.",
+                                 ifelse(growthform=="G"&photopath=="C3", "C3 Gram.",
+                                        ifelse(growthform=="G"&photopath=="C4", "C4 Gram.",
+                                               ifelse(growthform=='F'|growthform=="S"&Nfix=="N", "Non-N-Fixing Forb",
+                                                      ifelse(growthform=='F'|growthform=="S"&Nfix=="Y", "N-Fixing Forb","UNK")))))))%>%
+  group_by(trait_cat, calendar_year, treatment)%>%
+  summarise(abund=sum(mabund))
+
+#make new labels for facet_wrap step  
+collabel<-c(
+  N1P0="Control", 
+  N1P3="P",
+  N2P0="N",
+  N2P3="N+P")
+
+ggplot(data=ractime, aes(x=calendar_year, y=abund, group=trait_cat))+
+  geom_line()+
+  geom_point(aes(color=trait_cat), size=4)+
+  scale_color_manual(name="Functional Type", values=c("darkgreen", "chartreuse3", "green", "darkblue", "lightblue", "deepskyblue"), breaks = c("C4 Gram.", "C3 Gram.",  "Annual Gram.","Non-N-Fixing Forb", "N-Fixing Forb", "Annual Forb"))+
+  #geom_text_repel(max.overlaps = 10, size=5)+
+  facet_wrap(~treatment, labeller = labeller(treatment=collabel))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  ylab("Abundance")+
+  xlab("Year")
