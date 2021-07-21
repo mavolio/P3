@@ -37,6 +37,12 @@ richeven<-community_structure(comp, time.var="calendar_year", abundance.var="abu
 hist(richeven$richness)#this is normal
 hist(log(richeven$Evar))#log transfrom even
 
+#richness in plots in 2010
+rich2010<-richeven%>%
+  filter(calendar_year==2010&drought=="control")%>%
+  group_by(Trt)%>%
+  summarize(mean=mean(richness))
+
 
 ##richness in drought
 rich.d <- lmer(richness~Trt*drought*as.factor(calendar_year) + (1|plotnum), data=subset(richeven, treat=="drought"))
