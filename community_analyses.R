@@ -203,6 +203,22 @@ ggplot(subset(meanlf, trt2=="Control"|trt2=="P&N"), aes(x=calendar_year, y=mean,
   ylab("Relative Cover")+
   xlab("Year")
 
+###overall fig
+lfoverall<-lf%>%
+  filter(Trt=="Control"&precip=="control")%>%
+  group_by(trait_cat)%>%
+  summarize(mean=mean(relcov), sd=sd(relcov), n=length(relcov))%>%
+  mutate(se=sd/sqrt(n))%>%
+  filter(trait_cat!="NA")%>%
+  mutate(rank=rank(-mean))
+
+ggplot(lfoverall, aes(x=rank, y=mean))+
+  geom_line()+
+  geom_point(size=5, aes(color=trait_cat))+
+  scale_color_manual(name="Functional Type", values=c("darkgreen", "chartreuse3", "green", "darkblue", "lightblue", "deepskyblue"), breaks = c("C4 Gram.", "C3 Gram.",  "Annual Gram.","Non-N-Fixing Forb", "N-Fixing Forb", "Annual Forb"))+
+  xlab("Rank")+
+  ylab("Relative Cover")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
 lf2<-p3plotcomp%>%
   mutate(trait_cat=ifelse(life=="A", 'Annual', ifelse(form=="F"|form=="S", "Forb",
