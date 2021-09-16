@@ -5,17 +5,17 @@ library(nlme)
 library(emmeans)
 library(car)
 
-theme_set(theme_bw(20))
+theme_set(theme_bw(12))
 
 #make figure with all DP and ANPP and say bad blow in 2010/2011. We think it is questionable in those years and had edge effects. Make years continuous on x-axis and note with vertical line drought verus non-drought years.
 
 treats<-read.csv("C:/Users/mavolio2/Dropbox/Konza Research/p-cubed/Analyses/July 2015 Analyses/PPlot_PlotList.csv")
 
 p3<-read.csv("C:/Users/mavolio2/Dropbox/Konza Research/p-cubed/Analyses/July 2015 Analyses/p_cubed_biomass_AllYears.csv")%>%
-  mutate(drought="y")%>%
-  group_by(drought, year, plot, row, replicate)%>%
+  mutate(type="drought")%>%
+  group_by(type, year, plot, row, replicate)%>%
   mutate(anpp=sum(grass, forb, woody)*10)%>%
-  group_by(year, plot, row, drought)%>%
+  group_by(year, plot, row, type)%>%
   summarise(anpp=mean(anpp), grass=mean(grass*10), forb=mean(forb*10))%>%
   rename(calendar_year=year)%>%
   left_join(treats)%>%
@@ -27,7 +27,7 @@ p2<-read.csv("C:/Users/mavolio2/Dropbox/Konza Research/pplots/Biomass/To use/Com
   select(-X)%>%
   filter(calendar_year<2016 & calendar_year>2009,
          treatment=="N1P0"|treatment=="N1P3"|treatment=="N2P0"|treatment=="N2P3")%>%
-  mutate(drought="n")%>%
+  mutate(type="control")%>%
   select(-treatment)%>%
   left_join(treats)%>%
   select(-row, -plot, -rep, -plot_id)
@@ -38,63 +38,56 @@ biomass<-p2%>%
   bind_rows(p3)%>%
   mutate(treat=ifelse(calendar_year<2013,"Drought years","Recovery years"),
          nitro=as.factor(nitro),
+         phos=as.factor(phos))%>%
+  select(calendar_year, anpp, Trt, type, plotnum)%>%
+  filter(calendar_year==2011)
+
+##not going to include this data
+##now looking at disc pasture data
+dp2011<-read.csv("C:/Users/mavolio2/Dropbox/Konza Research/P-cubed/DiscPasture/2011_dispachmeter.csv")%>%
+  group_by(Year, plot, row, type)%>%
+  summarize(disc=mean(dischgt))
+dp2013<-read.csv("C:/Users/mavolio2/Dropbox/Konza Research/P-cubed/DiscPasture/p_cubed_disc_2013.csv")%>%
+  select(Year, plot, row, type, disc)
+dp2014<-read.csv("C:/Users/mavolio2/Dropbox/Konza Research/P-cubed/DiscPasture/p_cubed_disc_2014.csv")%>%
+  select(Year, plot, row, type, disc)
+dp2015<-read.csv("C:/Users/mavolio2/Dropbox/Konza Research/P-cubed/DiscPasture/p_cubed_disc_2015.csv")%>%
+  select(Year, plot, row, type, disc)
+
+dp<-rbind(dp2011, dp2013, dp2014, dp2015)
+
+dp2<-merge(dp, treats, by=c("plot", "row"))%>%
+  select(-rep)%>%
+  mutate(nitro=as.factor(nitro),
          phos=as.factor(phos),
-         calendar_year=as.factor(calendar_year))
+         year=as.factor(Year),
+         treatment=ifelse(Year<2013,"Drought years","Recovery years"),
+         sqrt.hgt=sqrt(disc),
+         anpp=(1805*sqrt.hgt-2065)/10)%>%
+  select(-disc, -sqrt.hgt, -plot, -row, -nitro, -phos, -year, -ForPCube)%>%
+  rename(calendar_year=Year, treat=treatment, canpp=anpp)%>%
+  filter(calendar_year==2011)
 
-hist(log(biomass$anpp))
-hist(log(biomass$grass))
-hist(log(biomass$forb))
 
+##correlating DP with ANPP
+cor<-biomass%>%
+  left_join(dp2)
 
-##double check nested plots design with a fixed factor here I am nestling drought within plotnum
+test<-cor%>%
+  group_by(type)%>%
+  summarize(r=round(cor.test(anpp, canpp)$estimate,3),
+            p=round(cor.test(anpp, canpp)$p.value,3))%>%
+  mutate(rpvalue=paste("r = ", r, ", p = ", p))
 
-m.d <- lmer(log(anpp)~Trt*drought*as.factor(calendar_year) + (1|plotnum), data=subset(biomass, treat=="Drought years"))
-summary(m.d)
-anova(m.d, ddf="Kenward-Roger")
-md<-anova(m.d)
-
-#doing contrasts - not doing these as there are no interactions i am interested in
-emmeans(m.d, pairwise~drought|as.factor(calendar_year), adjust="holm")
-
-m.r <- lmer(log(anpp)~Trt*drought*as.factor(calendar_year) + (1|plotnum/drought), data=subset(biomass, treat=="Recovery years"))
-summary(m.r)
-anova(m.r, ddf="Kenward-Roger")
-
-emmeans(m.r, pairwise~drought|as.factor(calendar_year), adjust="holm")
-
-biomave<-biomass%>%
-  group_by(calendar_year, drought, treat, Trt)%>%
-  summarize(mbio=mean(anpp),
-            sd=sd(anpp),
-            n=length(anpp))%>%
-  mutate(se=sd/sqrt(n))%>%
-  mutate(type="Clipping")
-
-dpave<-dp2%>%
-  rename(calendar_year=year, treat=treatment)%>%
-  mutate(drought=ifelse(type=="control", "n", "y"))%>%
-  group_by(calendar_year, drought, treat, Trt)%>%
-  summarize(mbio=mean(anpp),
-            sd=sd(anpp),
-            n=length(anpp))%>%
-  mutate(se=sd/sqrt(n))%>%
-  mutate(type="Disc Pasture")
-  
-biomasstoplot<-biomave%>%
-  bind_rows(dpave)%>%
-  mutate(group=paste(calendar_year, Trt, sep=""))
-
-ggplot(data=biomasstoplot, aes(x=calendar_year, y=mbio, color=Trt, shape=drought))+
-  geom_point(aes(group=Trt), size=5, position=position_dodge(0.5))+
-  #geom_line(aes(group=group))+
-  scale_color_manual(name="Treatment", values=c("Black", "Blue", "Red", "Purple"), breaks=c("Control", "P", "N", "P&N"), labels=c("Control", "P", "N", "N+P"))+
-  scale_shape_manual(name="Droughted", values=c(19, 17),labels=c("No", "Yes"))+
-  geom_errorbar(aes(ymin=mbio-(1.96*se), ymax=mbio+(1.96*se), group=Trt),position=position_dodge(0.5),width=.1)+
-  ylab(expression(paste("ANPP (g ","m"^"-2",")")))+
-  facet_wrap(~type, scales="free_y", ncol = 1)+
-  xlab("Year")+
-  geom_vline(xintercept = 3.5)
-
+ggplot(data=cor, aes(x=canpp, y=anpp))+
+  geom_point()+
+  geom_abline(intercept=0)+
+  scale_y_continuous(limits=c(180,830))+
+  scale_x_continuous(limits=c(180,830))+
+  ylab("Clipped ANPP")+
+  xlab("Disc Pasture ANPP")+
+  facet_wrap(~type)+
+  geom_text(data=test, mapping=aes(x=800, y = 250, label = rpvalue), hjust=1.05, vjust=1.5)
 
 #for ESA
 
@@ -259,80 +252,6 @@ ggplot(data=bdave, aes(x=calendar_year, y=mean, color=Trt, label=sig, group=Trt)
 
 
 
-##not going to include this data
-##now looking at disc pasture data
-dp2011<-read.csv("C:/Users/mavolio2/Dropbox/Konza Research/P-cubed/DiscPasture/2011_dispachmeter.csv")%>%
-  group_by(Year, plot, row, type)%>%
-  summarize(disc=mean(dischgt))
-dp2013<-read.csv("C:/Users/mavolio2/Dropbox/Konza Research/P-cubed/DiscPasture/p_cubed_disc_2013.csv")%>%
-  select(Year, plot, row, type, disc)
-dp2014<-read.csv("C:/Users/mavolio2/Dropbox/Konza Research/P-cubed/DiscPasture/p_cubed_disc_2014.csv")%>%
-  select(Year, plot, row, type, disc)
-dp2015<-read.csv("C:/Users/mavolio2/Dropbox/Konza Research/P-cubed/DiscPasture/p_cubed_disc_2015.csv")%>%
-  select(Year, plot, row, type, disc)
-
-dp<-rbind(dp2011, dp2013, dp2014, dp2015)
-
-dp2<-merge(dp, treats, by=c("plot", "row"))%>%
-  select(-rep)%>%
-  mutate(nitro=as.factor(nitro),
-         phos=as.factor(phos),
-         year=as.factor(Year),
-         treatment=ifelse(Year<2013,"treatment","recovery"),
-         sqrt.hgt=sqrt(disc),
-         anpp=(1805*sqrt.hgt-2065)/10)
-
-
-hist(log(dp2$anpp))
-
-mdp.t <- lmer(log(anpp)~nitro*phos*type + (1|plotnum), data=subset(dp2, treatment=="treatment"))
-summary(mdp.t)
-anova(mdp.t)
-mdp.r <- lmer(anpp~year*nitro*phos*type + (1|plotnum), data=subset(dp2, treatment=="recovery"))
-anova(mdp.r)
-
-dp3<-dp2%>%
-  select(-disc, -sqrt.hgt)%>%
-  spread(type, anpp)%>%
-  mutate(resist=log(drought/control))
-
-hist(dp3$resist)
-
-summary(aov(resist~nitro*phos, data=subset(dp3, treatment=="treatment")))
-
-dpave<-dp3%>%
-  filter(year==2011)%>%
-  group_by(Trt)%>%
-  summarise(mean=mean(resist), sd=sd(resist))%>%
-  mutate(se=sd/sqrt(6))
-
-ggplot(data=dpave, aes(x=Trt, y=mean))+
-  geom_bar(stat="identity")+
-  geom_errorbar(aes(ymax=mean+se, ymin=mean-se), width=.2)+
-  ylab("Diff in ANPP")
-
-
-library(doBy)
-
-funcs<-function(x)c(mn=mean(x),se=sd(x)/sqrt(length(x)))
-tograph.t<-summaryBy(anpp~Trt+type,data=subset(dp2, treatment=="treatment"), FUN=funcs)
-tograph.r<-summaryBy(anpp~Trt+type+year,data=subset(dp2, treatment=="recovery"), FUN=funcs)
-
-ggplot(data=tograph.t, aes(x=type, y=anpp.mn, color=Trt, group=Trt))+
-  geom_point(size=5)+
-  geom_line()+
-  scale_color_discrete(name="Fertilizer\nTreatment")+
-  geom_errorbar(aes(ymax=anpp.mn+anpp.se, ymin=anpp.mn-anpp.se), width=.2)+
-  scale_x_discrete(name="Water Treatment", label=c("Control","Drought"))+
-  ylab(expression(paste("ANPP (g ","m"^"-2",")")))
-
-ggplot(data=tograph.r, aes(x=year, y=anpp.mn, color=Trt, shape=type))+
-  geom_point(size=5)+
-  geom_line()+
-  scale_color_discrete(name="Fertilizer\nTreatment")+
-  geom_errorbar(aes(ymax=anpp.mn+anpp.se, ymin=anpp.mn-anpp.se), width=.2)+
-  #scale_x_discrete(name="Water Treatment", label=c("Control","Drought"))+
-  ylab(expression(paste("ANPP (g ","m"^"-2",")")))
 
 
 ###linking biomass to community compositon
