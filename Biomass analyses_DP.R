@@ -4,12 +4,13 @@ library(lmerTest)
 library(nlme)
 library(emmeans)
 library(car)
+library(gridExtra)
 
-theme_set(theme_bw(20))
+theme_set(theme_bw(12))
 
 #make figure with all DP and ANPP and say bad blow in 2010/2011. We think it is questionable in those years and had edge effects. Make years continuous on x-axis and note with vertical line drought verus non-drought years.
 
-###revised thinking, the ANPP data is just no good. 
+###revised thinking, the ANPP data is just no good and relegate to the appendix. 
 
 treats<-read.csv("C:/Users/mavolio2/Dropbox/Konza Research/p-cubed/Analyses/July 2015 Analyses/PPlot_PlotList.csv")
 
@@ -281,6 +282,12 @@ dp2<-merge(dp, treats, by=c("plot", "row"))%>%
          anpp=(1805*sqrt.hgt-2065)/10)
 
 
+c<-mean(subset(dp2, year==2011&type=="control")$anpp)
+d<-mean(subset(dp2, year==2011&type=="drought")$anpp)
+
+(d-c)/c
+
+
 hist(log(dp2$anpp))
 
 mdp.t <- lmer(log(anpp)~Trt*type + (1|plotnum), data=subset(dp2, treatment=="treatment"))
@@ -289,13 +296,15 @@ anova(mdp.t, ddf="Kenward-Roger")
 
 mdp.r <- lmer(anpp~as.factor(year)*Trt*type + (1|plotnum), data=subset(dp2, treatment=="recovery"))
 anova(mdp.r, ddf="Kenward-Roger")
-emmeans(mdp.r, pairwise~type|Trt, adjust="holm")
+emmeans(mdp.r, pairwise~Trt|type, adjust="holm")
+emmeans(mdp.r, pairwise~Trt, adjust="holm")
 
+#means by year and nutrient
 dpave<-dp2%>%
   rename(calendar_year=year, treat=treatment)%>%
   mutate(calendar_year=as.integer(as.character(calendar_year)))%>%
   mutate(drought=ifelse(type=="control", "n", "y"))%>%
-  group_by(calendar_year, drought, treat, Trt)%>%
+  group_by(calendar_year, treat, Trt)%>%
   summarize(mbio=mean(anpp),
             sd=sd(anpp),
             n=length(anpp))%>%
@@ -303,6 +312,7 @@ dpave<-dp2%>%
   mutate(type="Disc Pasture")%>%
   mutate(Trt2=factor(Trt, levels=c("Control", "P", "N", "P&N")))
 
+#means by drought years/recovery years
 dpave2<-dp2%>%
   rename(calendar_year=year, treat=treatment)%>%
   mutate(calendar_year=as.integer(as.character(calendar_year)))%>%
@@ -312,47 +322,32 @@ dpave2<-dp2%>%
             sd=sd(anpp),
             n=length(anpp))%>%
   mutate(se=sd/sqrt(n))%>%
-  mutate(type="Disc Pasture")
+  mutate(label=ifelse(Trt=="Control"&treat=="recovery"&drought=="y", "*", ""))%>%
+  mutate(treat2=ifelse(treat=="recovery", "Recovery years", "Drought year"))
 
-#during drought
-ggplot(data=subset(dpave, treat=="treatment"), aes(x=Trt, y=mbio, fill=drought))+
+#Figure 3
+ggplot(data=dpave2, aes(x=Trt, y=mbio, fill=drought, label=label))+
   geom_bar(stat="identity", position=position_dodge())+
   scale_fill_manual(name="Droughted", values=c("Blue", "Orange"), labels=c("No", "Yes"))+
   geom_errorbar(aes(ymin=mbio-se, ymax=mbio+se), position=position_dodge(0.9), width=.2)+
   ylab(expression(paste("ANPP (g ","m"^"-2",")")))+
-  xlab("Treatment")+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  scale_x_discrete(limits=c("Control", "P", "N", "P&N"), labels=c("Control", "P", "N", "N+P"))
-
-#recovery fig
-ggplot(data=subset(dpave2, treat=="recovery"), aes(x=Trt, y=mbio, fill=drought))+
-  geom_bar(stat="identity", position=position_dodge())+
-  scale_fill_manual(name="Droughted", values=c("Blue", "Orange"), labels=c("No", "Yes"))+
-  geom_errorbar(aes(ymin=mbio-se, ymax=mbio+se), position=position_dodge(0.9), width=.2)+
-  ylab(expression(paste("ANPP (g ","m"^"-2",")")))+
-  xlab("Treatment")+
+  xlab("Nutrient Treatment")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   scale_x_discrete(limits=c("Control", "P", "N", "P&N"), labels=c("Control", "P", "N", "N+P"))+
-  annotate("text", x=1, y=600, label="*", size=8)
+  facet_wrap(~treat2)+
+  geom_text(aes(y=(mbio+se)+0.05))
 
+#appendix through time
 
-#overall fig
-trtlab<-c(Control="Control", P="P", N="N", 'P&N'="N+P")
-
-ggplot(data=dpave, aes(x=calendar_year, y=mbio, color=Trt, shape=drought))+
-  geom_point(aes(group=Trt), size=5, position=position_dodge(0.5))+
+ggplot(data=subset(dpave, treat=="recovery"), aes(x=as.factor(calendar_year), y=mbio, color=Trt, group=Trt))+
+  geom_point(aes(group=Trt), size=5)+
   scale_color_manual(name="Treatment", values=c("Black", "Blue", "Red", "Purple"), breaks=c("Control", "P", "N", "P&N"), labels=c("Control", "P", "N", "N+P"))+
+  geom_line()+
   scale_shape_manual(name="Droughted", values=c(19, 17),labels=c("No", "Yes"))+
-  geom_errorbar(aes(ymin=mbio-se, ymax=mbio+se, group=Trt),position=position_dodge(0.5), width=.1)+
+  geom_errorbar(aes(ymin=mbio-se, ymax=mbio+se, group=Trt), width=.1)+
   ylab(expression(paste("ANPP (g ","m"^"-2",")")))+
   xlab("Year")+
-  geom_vline(xintercept = 2012.5)+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  facet_wrap(~Trt2, scales="free_y", labeller=labeller(Tr2=trtlab))+
-  geom_line(aes(group=drought))+
-  scale_x_continuous(limits=c(2010, 2015))+
-  guides(color=F)
-
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
 ##looking at resistance, not sure of this.
 # dp3<-dp2%>%
