@@ -26,7 +26,7 @@ comp<-p3plotcomp%>%
   mutate(unid=paste(plotnum, precip, sep="_"), 
          unidt=paste(Trt, precip, sep="_"))
 
-##looking at richness and evenness - i am just not interested in this
+##looking at richness and evenness for structure analyses
           
 richeven<-community_structure(comp, time.var="calendar_year", abundance.var="abundance", replicate.var = "unid")%>%
   separate(unid, into=c("plotnum", "drought"), sep="_")%>%
@@ -58,7 +58,19 @@ rich.r <- lmer(richness~Trt*drought*as.factor(calendar_year) + (1|plotnum), data
 anova(rich.r, ddf="Kenward-Roger")
 
 #doing contrasts
-emmeans(rich.r, pairwise~Trt|as.factor(calendar_year), adjust="holm")
+emmeans(rich.r, pairwise~Trt, adjust="holm")
+
+
+
+##evenness in drought
+even.d <- lmer(log(Evar)~Trt*drought*as.factor(calendar_year) + (1|plotnum), data=subset(richeven, treat=="drought"))
+anova(even.d, ddf="Kenward-Roger")
+#doing contrasts
+emmeans(even.d, pairwise~Trt, adjust="holm")
+
+#richness during recovery
+even.r <- lmer(log(Evar)~Trt*drought*as.factor(calendar_year) + (1|plotnum), data=subset(richeven, treat=="recovery"))
+anova(even.r, ddf="Kenward-Roger")
 
 richtoplot<-richeven%>%
   group_by(calendar_year, drought, Trt, treat)%>%
@@ -66,22 +78,26 @@ richtoplot<-richeven%>%
   mutate(se=sd/sqrt(n))%>%
   mutate(trt2=factor(Trt, levels=c("Control", "P", "N", "P&N")))
 
-trtlab<-c(Control="Control", P="P", N="N", 'P&N'="N+P")
-
-ggplot(richtoplot, aes(x=calendar_year, y=mean, color=trt2, shape=drought))+
-  geom_point(size=5)+
-  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.2)+
-  facet_wrap(~trt2, labeller =labeller(trt2=trtlab))+
-  geom_line()+
-  scale_color_manual(name="Treatment", values=c("black", "blue", "red", "purple"), breaks = c("Control", "P", "N","P&N"))+
-  scale_shape_manual(name="Droughted", labels=c("No", 'Yes'), values=c(19,17))+
-  geom_vline(xintercept=2012.5)+
-  theme(panel.grid.major=element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90))+
-  ylab("Species Richness")+
-  xlab("Year")
-
-
-
+eventoplot<-richeven%>%
+  group_by(drought, treat)%>%
+  summarise(mean=mean(Evar), sd=sd(Evar), n=length(Evar))%>%
+  mutate(se=sd/sqrt(n))
+         
+#          
+# trtlab<-c(Control="Control", P="P", N="N", 'P&N'="N+P")
+# 
+# ggplot(richtoplot, aes(x=calendar_year, y=mean, color=trt2, shape=drought))+
+#   geom_point(size=5)+
+#   geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.2)+
+#   facet_wrap(~trt2, labeller =labeller(trt2=trtlab))+
+#   geom_line()+
+#   scale_color_manual(name="Treatment", values=c("black", "blue", "red", "purple"), breaks = c("Control", "P", "N","P&N"))+
+#   scale_shape_manual(name="Droughted", labels=c("No", 'Yes'), values=c(19,17))+
+#   geom_vline(xintercept=2012.5)+
+#   theme(panel.grid.major=element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90))+
+#   ylab("Species Richness")+
+#   xlab("Year")
+# 
 
 
 ###looking at community changes
