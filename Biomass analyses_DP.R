@@ -377,7 +377,11 @@ ggplot(data=subset(dpave, treat=="recovery"), aes(x=as.factor(calendar_year), y=
 
 ###linking biomass to community compositon
 ##need to run lf code in community_analyses
+#can I think of otherways to do this. Maybe chat with Kim.
 
+#linking cover composition of plots with control-treat production differences
+
+#looking at all 6 life forms
 dpdiff<-dp2%>%
     select(-disc, -sqrt.hgt)%>%
     spread(type, anpp)%>%
@@ -392,9 +396,9 @@ diff<-dpdiff%>%
 ggplot(data=diff, aes(x=relcov, y=diff))+
   geom_point()+
   geom_smooth(method="lm")+
-  facet_wrap(~trait_cat, scales='free')
+  facet_grid(~trait_cat~treatment, scales='free')
 
-with(subset(diff, trait_cat=="Annual Forb"), cor.test(diff, relcov))#sig
+with(subset(diff, trait_cat=="Annual Forb"&treatment=="recovery"), cor.test(diff, relcov))#sig
 with(subset(diff, trait_cat=="Annual Gram."), cor.test(diff, relcov))#not sig
 with(subset(diff, trait_cat=="C3 Gram."), cor.test(diff, relcov))#sig
 with(subset(diff, trait_cat=="C4 Gram."), cor.test(diff, relcov))#not sig - but will go away
