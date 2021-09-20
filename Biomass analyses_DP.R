@@ -378,71 +378,102 @@ ggplot(data=subset(dpave, treat=="recovery"), aes(x=as.factor(calendar_year), y=
 ###linking biomass to community compositon
 ##need to run lf code in community_analyses
 #can I think of otherways to do this. Maybe chat with Kim.
+##also need to get multdiff and multdiff_func
 
 #linking cover composition of plots with control-treat production differences
 
-#looking at all 6 life forms
+#looking at all compositonal and fucntional (life forms) differences
 dpdiff<-dp2%>%
     select(-disc, -sqrt.hgt)%>%
     spread(type, anpp)%>%
-    mutate(diff=(drought-control)/control)
-
-diff<-dpdiff%>%
+    mutate(diff=(drought-control)/control)%>%
   rename(calendar_year=Year)%>%
-  mutate(calendar_year=as.integer(as.character(calendar_year)))%>%
-  left_join(lf)%>%
-  filter(trait_cat!="NA", precip=="drought")
+  mutate(plotnum=as.character(plotnum))%>%
+  select(calendar_year, plotnum, Trt, treatment, diff)
 
-ggplot(data=diff, aes(x=relcov, y=diff))+
+
+##here I am correlating differences in production to differences in composition based on species and composition based on functional types. THere is nothing here. 
+diff_comp<-dpdiff%>%
+  left_join(multdiff)%>%
+  mutate(type="species")
+
+diff_func<-dpdiff%>%
+  left_join(multdiff_func)%>%
+  mutate(type="functional")%>%
+  bind_rows(diff_comp)
+
+
+with(subset(diff_comp, treatment=="recovery"&type=="species"), cor.test(diff, composition_diff))
+with(subset(diff_comp, treatment=="treatment"&type=="species"), cor.test(diff, composition_diff))
+with(subset(diff_func, treatment=="recovery"&type=="functional"), cor.test(diff, composition_diff))
+with(subset(diff_func, treatment=="treatment"&type=="functional"), cor.test(diff, composition_diff))
+
+ggplot(data=diff_func, aes(x=composition_diff, y=diff))+
   geom_point()+
   geom_smooth(method="lm")+
-  facet_grid(~trait_cat~treatment, scales='free')
-
-with(subset(diff, trait_cat=="Annual Forb"&treatment=="recovery"), cor.test(diff, relcov))#sig
-with(subset(diff, trait_cat=="Annual Gram."), cor.test(diff, relcov))#not sig
-with(subset(diff, trait_cat=="C3 Gram."), cor.test(diff, relcov))#sig
-with(subset(diff, trait_cat=="C4 Gram."), cor.test(diff, relcov))#not sig - but will go away
-with(subset(diff, trait_cat=="N-Fixing Forb"), cor.test(diff, relcov))#not sig
-with(subset(diff, trait_cat=="Non-N-Fixing Forb"), cor.test(diff, relcov))#sig
+  facet_grid(type~treatment)+
+  geom_hline(yintercept=0)
 
 
-diff2<-dpdiff%>%
-  rename(calendar_year=Year)%>%
-  mutate(calendar_year=as.integer(as.character(calendar_year)))%>%
-  left_join(lf2)%>%
-  filter(trait_cat!="NA", precip=="drought", treatment=="treatment")
 
-ggplot(data=diff2, aes(x=relcov, y=diff))+
-  geom_point(aes(color=Trt),size=3)+
-  #geom_smooth(data=subset(diff2, trait_cat=="Forb"), method="lm", se=F, color="black")+
-  #geom_smooth(data=subset(diff2, trait_cat=="Grass"), method="lm", se=F, color="black")+
-  facet_wrap(~trait_cat, scales='free')+
-  ylab("% ANPP Difference\nDroughted-Non-Droughted")+
-  xlab("Relative Cover of Functional Type")+
-  scale_color_manual(name="Treatment", breaks=c("Control", "P", "N", "P&N"), label=c("Control", "P", "N", "N+P"), values=c("black", "blue", "red", "purple"))+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+#tried doing this with the diff in production and the cover of LF in the treated plots. No longer want to do it this way. 
 
-with(subset(diff2, trait_cat=="Annual"), cor.test(diff, relcov))#notsig
-with(subset(diff2, trait_cat=="Forb"), cor.test(diff, relcov))#notsig
-with(subset(diff2, trait_cat=="Grass"), cor.test(diff, relcov))#notsig
-
-
-diff3<-dpdiff%>%
-  rename(calendar_year=Year)%>%
-  mutate(calendar_year=as.integer(as.character(calendar_year)))%>%
-  left_join(lf2)%>%
-  filter(trait_cat!="NA", precip=="drought", treatment=="recovery")
-
-ggplot(data=diff3, aes(x=relcov, y=diff))+
-  geom_point(aes(color=Trt),size=3)+
-  facet_wrap(~trait_cat, scales='free')+
-  ylab("% ANPP Difference\nDroughted-Non-Droughted")+
-  geom_smooth(data=subset(diff3, trait_cat=="Annual"), method="lm", se=F, color="black")+
-  geom_smooth(data=subset(diff3, trait_cat=="Grass"), method="lm", se=F, color="black")+
-  xlab("Relative Cover of Functional Type")+
-  scale_color_manual(name="Treatment", breaks=c("Control", "P", "N", "P&N"), label=c("Control", "P", "N", "N+P"), values=c("black", "blue", "red", "purple"))+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
-
-with(subset(diff3, trait_cat=="Annual"), cor.test(diff, relcov))#sig
-with(subset(diff3, trait_cat=="Forb"), cor.test(diff, relcov))#notsig
-with(subset(diff3, trait_cat=="Grass"), cor.test(diff, relcov))#sig
+# diff<-dpdiff%>%
+#   rename(calendar_year=Year)%>%
+#   mutate(calendar_year=as.integer(as.character(calendar_year)))%>%
+#   left_join(lf)%>%
+#   filter(trait_cat!="NA", precip=="drought")
+# 
+# ggplot(data=diff, aes(x=relcov, y=diff))+
+#   geom_point()+
+#   geom_smooth(method="lm")+
+#   facet_grid(~trait_cat~treatment, scales='free')
+# 
+# with(subset(diff, trait_cat=="Annual Forb"&treatment=="recovery"), cor.test(diff, relcov))#sig
+# with(subset(diff, trait_cat=="Annual Gram."), cor.test(diff, relcov))#not sig
+# with(subset(diff, trait_cat=="C3 Gram."), cor.test(diff, relcov))#sig
+# with(subset(diff, trait_cat=="C4 Gram."), cor.test(diff, relcov))#not sig - but will go away
+# with(subset(diff, trait_cat=="N-Fixing Forb"), cor.test(diff, relcov))#not sig
+# with(subset(diff, trait_cat=="Non-N-Fixing Forb"), cor.test(diff, relcov))#sig
+# 
+# 
+# diff2<-dpdiff%>%
+#   rename(calendar_year=Year)%>%
+#   mutate(calendar_year=as.integer(as.character(calendar_year)))%>%
+#   left_join(lf2)%>%
+#   filter(trait_cat!="NA", precip=="drought", treatment=="treatment")
+# 
+# ggplot(data=diff2, aes(x=relcov, y=diff))+
+#   geom_point(aes(color=Trt),size=3)+
+#   #geom_smooth(data=subset(diff2, trait_cat=="Forb"), method="lm", se=F, color="black")+
+#   #geom_smooth(data=subset(diff2, trait_cat=="Grass"), method="lm", se=F, color="black")+
+#   facet_wrap(~trait_cat, scales='free')+
+#   ylab("% ANPP Difference\nDroughted-Non-Droughted")+
+#   xlab("Relative Cover of Functional Type")+
+#   scale_color_manual(name="Treatment", breaks=c("Control", "P", "N", "P&N"), label=c("Control", "P", "N", "N+P"), values=c("black", "blue", "red", "purple"))+
+#   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+# 
+# with(subset(diff2, trait_cat=="Annual"), cor.test(diff, relcov))#notsig
+# with(subset(diff2, trait_cat=="Forb"), cor.test(diff, relcov))#notsig
+# with(subset(diff2, trait_cat=="Grass"), cor.test(diff, relcov))#notsig
+# 
+# 
+# diff3<-dpdiff%>%
+#   rename(calendar_year=Year)%>%
+#   mutate(calendar_year=as.integer(as.character(calendar_year)))%>%
+#   left_join(lf2)%>%
+#   filter(trait_cat!="NA", precip=="drought", treatment=="recovery")
+# 
+# ggplot(data=diff3, aes(x=relcov, y=diff))+
+#   geom_point(aes(color=Trt),size=3)+
+#   facet_wrap(~trait_cat, scales='free')+
+#   ylab("% ANPP Difference\nDroughted-Non-Droughted")+
+#   geom_smooth(data=subset(diff3, trait_cat=="Annual"), method="lm", se=F, color="black")+
+#   geom_smooth(data=subset(diff3, trait_cat=="Grass"), method="lm", se=F, color="black")+
+#   xlab("Relative Cover of Functional Type")+
+#   scale_color_manual(name="Treatment", breaks=c("Control", "P", "N", "P&N"), label=c("Control", "P", "N", "N+P"), values=c("black", "blue", "red", "purple"))+
+#   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+# 
+# with(subset(diff3, trait_cat=="Annual"), cor.test(diff, relcov))#sig
+# with(subset(diff3, trait_cat=="Forb"), cor.test(diff, relcov))#notsig
+# with(subset(diff3, trait_cat=="Grass"), cor.test(diff, relcov))#sig
