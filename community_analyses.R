@@ -61,8 +61,6 @@ anova(rich.r, ddf="Kenward-Roger")
 #doing contrasts
 emmeans(rich.r, pairwise~Trt, adjust="holm")
 
-
-
 ##evenness in drought
 even.d <- lmer(log(Evar)~Trt*drought*as.factor(calendar_year) + (1|plotnum), data=subset(richeven, treat=="drought"))
 anova(even.d, ddf="Kenward-Roger")
@@ -101,7 +99,7 @@ eventoplot<-richeven%>%
 # 
 
 
-#Given the experimetn design, looking at change does not seem like the best appraoch.
+#Given the experimetn design, looking at change does not seem like the best approach.
 
 # ###looking at community changes
 # deltarac<-RAC_change(comp, time.var = "calendar_year", abundance.var = "abundance", replicate.var = "unid", species.var = "genus_species")%>%
@@ -297,12 +295,12 @@ totcov<-comp%>%
   summarize(tot=sum(abundance))
 
 lf<-p3plotcomp%>%
-mutate(trait_cat=ifelse(form=="F"&life=="A", "AF",
-                        ifelse(form=="G"&life=="A", "AG",
-                               ifelse(form=="G"&C3_C4=="C3", "C3",
-                                      ifelse(form=="G"&C3_C4=="C4", "C4",
-                                             ifelse(form=='F'|form=="S"&n_fixer=="N", "Non-N",
-                                                    ifelse(form=='F'|form=="S"&n_fixer=="Y", "N-Fixing","UNK")))))))%>%
+mutate(trait_cat=ifelse(form=="F"&life=="A", "Annual Forb",
+                        ifelse(form=="G"&life=="A", "Annual Gram.",
+                               ifelse(form=="G"&C3_C4=="C3", "C3 Gram.",
+                                      ifelse(form=="G"&C3_C4=="C4", "C4 Gram.",
+                                             ifelse(form=='F'|form=="S"&n_fixer=="N", "Non-N-Fixing Forb",
+                                                    ifelse(form=='F'|form=="S"&n_fixer=="Y", "N-Fixing Forb","UNK")))))))%>%
   left_join(treats)%>%
   group_by(plotnum, Trt, precip, calendar_year, trait_cat)%>%
   summarise(cov=sum(abundance))%>%
@@ -336,7 +334,7 @@ ggplot(subset(meanlf, trt2=="Control"|trt2=="P&N"), aes(x=calendar_year, y=mean,
   xlab("Year")
 
 
-###looking at functional compositional differences through time
+###looking at functional compositions differences through time
 multdiff_func<-multivariate_difference(lf, time.var="calendar_year", species.var="trait_cat", abundance.var="cov", replicate.var = "unid", treatment.var = "unid3")%>%
   separate(unid3, into=c("plotnum", "Trt", "drought"), sep="_")%>%
   separate(unid32, into=c("plotnum2", "Trt2", "drought2"), sep="_")%>%
@@ -369,27 +367,25 @@ mlt_diff_func<-ggplot(data=multdiff_func_means, aes(x=calendar_year, y=mean, col
   xlab("Year")
 
 
-
-
-###overall fig
-lfoverall<-lf%>%
-  filter(Trt=="Control"|Trt=="P&N", precip=="control")%>%
-  group_by(Trt, trait_cat)%>%
-  summarize(mean=mean(relcov), sd=sd(relcov), n=length(relcov))%>%
-  mutate(se=sd/sqrt(n))%>%
-  filter(trait_cat!="NA")%>%
-  mutate(rank=rank(-mean))
-
-trtlab<-c(Control="Control", 'P&N'="N+P")
-
-ggplot(lfoverall, aes(x=rank, y=mean))+
-  geom_line()+
-  geom_point(size=5, aes(color=trait_cat))+
-  scale_color_manual(name="Functional Type", values=c("darkgreen", "chartreuse3", "green", "darkblue", "lightblue", "deepskyblue"), breaks = c("C4 Gram.", "C3 Gram.",  "Annual Gram.","Non-N-Fixing Forb", "N-Fixing Forb", "Annual Forb"))+
-  xlab("Rank")+
-  ylab("Relative Cover")+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  facet_wrap(~Trt, labeller = labeller(Trt=trtlab), ncol=1)
+###overall fig of RAC of funcational gropus and N+P and Control treatments - this was for ESA talk
+# lfoverall<-lf%>%
+#   filter(Trt=="Control"|Trt=="P&N", precip=="control")%>%
+#   group_by(Trt, trait_cat)%>%
+#   summarize(mean=mean(relcov), sd=sd(relcov), n=length(relcov))%>%
+#   mutate(se=sd/sqrt(n))%>%
+#   filter(trait_cat!="NA")%>%
+#   mutate(rank=rank(-mean))
+# 
+# trtlab<-c(Control="Control", 'P&N'="N+P")
+# 
+# ggplot(lfoverall, aes(x=rank, y=mean))+
+#   geom_line()+
+#   geom_point(size=5, aes(color=trait_cat))+
+#   scale_color_manual(name="Functional Type", values=c("darkgreen", "chartreuse3", "green", "darkblue", "lightblue", "deepskyblue"), breaks = c("C4 Gram.", "C3 Gram.",  "Annual Gram.","Non-N-Fixing Forb", "N-Fixing Forb", "Annual Forb"))+
+#   xlab("Rank")+
+#   ylab("Relative Cover")+
+#   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+#   facet_wrap(~Trt, labeller = labeller(Trt=trtlab), ncol=1)
 
 lf2<-p3plotcomp%>%
   mutate(trait_cat=ifelse(life=="A", 'Annual', ifelse(form=="F"|form=="S", "Forb",
@@ -402,44 +398,67 @@ lf2<-p3plotcomp%>%
   left_join(totcov)%>%
   mutate(relcov=cov/tot)
 
-####exploring trait category changes - I am not sure that this is the way to do this.....
-
-#If I do need to do it this way I need to seriously debug this code.
+####exploring trait category changes - based on categoreis.....
 traits<-p3plotcomp%>%
   select(genus_species, life, form, C3_C4, n_fixer)%>%
   unique()
 
-diff_abund<-abundance_difference(comp, time.var='calendar_year', abundance.var = "abundance", replicate.var = "unid", species.var="genus_species", treatment.var = "unid3")
+diff_abund<-abundance_difference(lf, time.var='calendar_year', abundance.var = "cov", replicate.var = "unid", species.var="trait_cat", treatment.var = "unid3")%>%
+  separate(unid3, into=c("plotnum", "Trt", "drought"), sep="_")%>%
+  separate(unid32, into=c("plotnum2", "Trt2", "drought2"), sep="_")%>%
+  filter(plotnum==plotnum2)%>%
+  select(-Trt2, -plotnum2)%>%
+  mutate(treat=ifelse(calendar_year<2013, "Drought years", "Recovery years"))
 
-diff_abund2<-diff_abund%>%
-  separate(unid, into=c("plotnum", "drought"), sep="_")%>%
-  mutate(plotnum=as.integer(as.character(plotnum)))%>%
-  left_join(traits)%>%
-  mutate(trait_cat=ifelse(form=="F"&life=="A", "Annual Forb",
-                          ifelse(form=="G"&life=="A", "Annual Gram.",
-                                 ifelse(form=="G"&C3_C4=="C3", "C3 Gram.",
-                                        ifelse(form=="G"&C3_C4=="C4", "C4 Gram.",
-                                               ifelse(form=='F'|form=="S"&n_fixer=="N", "Non-N-Fixing Forb",
-                                                      ifelse(form=='F'|form=="S"&n_fixer=="Y", "N-Fixing Forb","UNK")))))))%>%
-  left_join(treats)%>%
-  group_by(plotnum, trait_cat, drought, Trt, calendar_year)%>%
-  summarise(abund=mean(difference))%>%
-  mutate(treat=ifelse(calendar_year<2013, "drought", "recovery"))
-
-abund.d <- lmer(abund~Trt*drought*as.factor(calendar_year2) + (1|plotnum), data=subset(deltabund2, treat=="recovery"&trait_cat=="C4 Gram."))
-
-anova(abund.d, ddf="Kenward-Roger")
-emmeans(rank.r, pairwise~drought|Trt|as.factor(calendar_year), adjust="holm")
-
-
-#plotting this
-mabunddiff<-diff_abund2%>%
-  group_by(Trt, drought, trait_cat, calendar_year)%>%
-  summarize(mean=mean(abund), sd=sd(abund), n=length(abund))%>%
+#need to add zeros for everything
+diff_abund_fill<-diff_abund%>%
+  select(plotnum, Trt, difference, treat, calendar_year, trait_cat)%>%
+  group_by(plotnum, Trt, treat, calendar_year)%>%
+  spread(trait_cat, difference, fill=0)%>%
+  gather(trait_cat, difference, 'Annual Forb':'Non-N-Fixing Forb')
+  
+meandiffabund<-diff_abund_fill%>%
+  group_by(calendar_year, treat, Trt, trait_cat)%>%
+  summarize(mean=mean(difference), sd=sd(difference), n=length(difference))%>%
   mutate(se=sd/sqrt(n))%>%
-  na.omit
+  mutate(trt2=factor(Trt, levels=c("Control", "P", "N", "P&N")))
 
-ggplot(data=mabunddiff, aes(x=calendar_year, y=mean, color=drought))+
+ggplot(meandiffabund, aes(x=calendar_year, y=mean, color=Trt))+
   geom_point()+
+  geom_line()+
   geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.1)+
-  facet_grid(trait_cat~Trt, scale="free")
+  facet_wrap(~trait_cat, ncol=2)+
+  scale_color_manual(name="Treatment", breaks=c("Control", "P", "N", "P&N"), label=c("Control", "P", "N", "N+P"), values=c("black", "blue", "red", "purple"))+
+  theme(panel.grid.major=element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90))+
+  geom_vline(xintercept = 2012.5)+
+  geom_hline(yintercept = 0)+
+  ylab("Cover differences due to drought")+
+  xlab("Nutrient Treatment")
+
+#other approach to figure
+meandiffabund2<-diff_abund_fill%>%
+  group_by(treat, Trt, trait_cat)%>%
+  summarize(mean=mean(difference), sd=sd(difference), n=length(difference))%>%
+  mutate(se=sd/sqrt(n))%>%
+  mutate(trt2=factor(Trt, levels=c("Control", "P", "N", "P&N")))
+
+ggplot(meandiffabund2, aes(x=trt2, y=mean, fill=Trt))+
+  geom_bar(stat="identity", position = position_dodge(0.9))+
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position = position_dodge(0.9), width=0.1)+
+  facet_grid(treat~trait_cat)+
+  scale_fill_manual(name="Treatment", breaks=c("Control", "P", "N", "P&N"), label=c("Control", "P", "N", "N+P"), values=c("black", "blue", "red", "purple"))+
+  theme(panel.grid.major=element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90))+
+  geom_hline(yintercept = 0)+
+  ylab("Cover differences due to drought")+
+  xlab("Nutrient Treatment")+
+  theme(legend.position = "none")
+
+abund.d <- lmer(difference~Trt*trait_cat*as.factor(calendar_year) + (1|plotnum), data=subset(diff_abund_fill, treat=="Drought years"))
+anova(abund.d, ddf="Kenward-Roger")
+emmeans(abund.d, pairwise~Trt|trait_cat, adjust="holm")
+
+abund.r <- lmer(difference~Trt*trait_cat*as.factor(calendar_year) + (1|plotnum), data=subset(diff_abund_fill, treat=="Recovery years"))
+anova(abund.r, ddf="Kenward-Roger")
+emmeans(abund.r, pairwise~Trt|trait_cat, adjust="holm")
+
+
