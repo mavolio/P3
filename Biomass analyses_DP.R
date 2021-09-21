@@ -277,7 +277,7 @@ dp2<-merge(dp, treats, by=c("plot", "row"))%>%
   mutate(nitro=as.factor(nitro),
          phos=as.factor(phos),
          year=as.factor(Year),
-         treatment=ifelse(Year<2013,"treatment","recovery"),
+         treatment=ifelse(Year<2013,"Drought years","Recovery years"),
          sqrt.hgt=sqrt(disc),
          anpp=(1805*sqrt.hgt-2065)/10)
 
@@ -290,11 +290,11 @@ d<-mean(subset(dp2, year==2011&type=="drought")$anpp)
 
 hist(log(dp2$anpp))
 
-mdp.t <- lmer(log(anpp)~Trt*type + (1|plotnum), data=subset(dp2, treatment=="treatment"))
+mdp.t <- lmer(log(anpp)~Trt*type + (1|plotnum), data=subset(dp2, treatment=="Drought years"))
 summary(mdp.t)
 anova(mdp.t, ddf="Kenward-Roger")
 
-mdp.r <- lmer(anpp~as.factor(year)*Trt*type + (1|plotnum), data=subset(dp2, treatment=="recovery"))
+mdp.r <- lmer(anpp~as.factor(year)*Trt*type + (1|plotnum), data=subset(dp2, treatment=="Recovery years"))
 anova(mdp.r, ddf="Kenward-Roger")
 emmeans(mdp.r, pairwise~Trt|type, adjust="holm")
 emmeans(mdp.r, pairwise~Trt, adjust="holm")
@@ -322,8 +322,7 @@ dpave2<-dp2%>%
             sd=sd(anpp),
             n=length(anpp))%>%
   mutate(se=sd/sqrt(n))%>%
-  mutate(label=ifelse(Trt=="Control"&treat=="recovery"&drought=="y", "*", ""))%>%
-  mutate(treat2=ifelse(treat=="recovery", "Recovery years", "Drought year"))
+  mutate(label=ifelse(Trt=="Control"&treat=="Recovery years"&drought=="y", "*", ""))
 
 #Figure 3
 ggplot(data=dpave2, aes(x=Trt, y=mbio, fill=drought, label=label))+
@@ -334,12 +333,12 @@ ggplot(data=dpave2, aes(x=Trt, y=mbio, fill=drought, label=label))+
   xlab("Nutrient Treatment")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   scale_x_discrete(limits=c("Control", "P", "N", "P&N"), labels=c("Control", "P", "N", "N+P"))+
-  facet_wrap(~treat2)+
+  facet_wrap(~treat)+
   geom_text(aes(y=(mbio+se)+0.05))
 
 #appendix through time
 
-ggplot(data=subset(dpave, treat=="recovery"), aes(x=as.factor(calendar_year), y=mbio, color=Trt, group=Trt))+
+ggplot(data=subset(dpave, treat=="Recovery years"), aes(x=as.factor(calendar_year), y=mbio, color=Trt, group=Trt))+
   geom_point(aes(group=Trt), size=5)+
   scale_color_manual(name="Treatment", values=c("Black", "Blue", "Red", "Purple"), breaks=c("Control", "P", "N", "P&N"), labels=c("Control", "P", "N", "N+P"))+
   geom_line()+
@@ -370,10 +369,58 @@ ggplot(data=subset(dpave, treat=="recovery"), aes(x=as.factor(calendar_year), y=
 #   geom_errorbar(aes(ymax=mean+se, ymin=mean-se), width=.2)+
 #   ylab("Diff in ANPP")
 
+###doing the ANPP as differences
+
+dpdiff<-dp2%>%
+    select(-disc, -sqrt.hgt)%>%
+    spread(type, anpp)%>%
+    mutate(diff=drought-control)%>%
+  rename(calendar_year=Year)%>%
+  mutate(plotnum=as.character(plotnum))%>%
+  select(calendar_year, plotnum, Trt, treatment, diff)
+
+dpdiff.t <- aov(diff~Trt, data=subset(dpdiff, treatment=="Drought years"))
+summary(dpdiff.t)
 
 
+dpdiff.r <- lmer(diff~Trt*as.factor(calendar_year) + (1|plotnum), data=subset(dpdiff, treatment=="Recovery years"))
+anova(dpdiff.r, ddf="Kenward-Roger")
 
 
+dpdiffmeans<-dpdiff%>%
+  group_by(Trt, treatment)%>%
+  summarize(mean=mean(diff), sd=sd(diff), n=length(diff))%>%
+  mutate(se=sd/sqrt(n))%>%
+  mutate(trt2=factor(Trt, levels=c("Control", "P", "N", "P&N")))
+
+ggplot(dpdiffmeans, aes(x=trt2, y=mean, fill=Trt))+
+  geom_bar(stat="identity", position = position_dodge(0.9))+
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position = position_dodge(0.9), width=0.1)+
+  facet_wrap(~treatment, ncol=1)+
+  scale_fill_manual(name="Treatment", breaks=c("Control", "P", "N", "P&N"),  values=c("black", "blue", "red", "purple"))+
+  scale_x_discrete(labels=c("Control", "P", "N", "N+P"))+
+  theme(panel.grid.major=element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90))+
+  geom_hline(yintercept = 0)+
+  ylab("ANPP differences due to drought")+
+  xlab("Nutrient Treatment")+
+  theme(legend.position = "none")
+
+##by treatment and time - can put this in an appendix
+dpdiffmeans_time<-dpdiff%>%
+  group_by(Trt, treatment, calendar_year)%>%
+  summarize(mean=mean(diff), sd=sd(diff), n=length(diff))%>%
+  mutate(se=sd/sqrt(n))%>%
+  mutate(trt2=factor(Trt, levels=c("Control", "P", "N", "P&N")))
+
+ggplot(subset(dpdiffmeans_time, treatment=="Recovery years"), aes(x=as.factor(calendar_year), y=mean, color=trt2))+
+  geom_point(size=3)+
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.1)+
+  scale_color_manual(name="Treatment", breaks=c("Control", "P", "N", "P&N"), label=c("Control", "P", "N", "N+P"), values=c("black", "blue", "red", "purple"))+
+  theme(panel.grid.major=element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90))+
+  geom_hline(yintercept = 0)+
+  ylab("ANPP differences due to drought")+
+  xlab("Year")+
+  geom_line(aes(group=trt2))
 
 ###linking biomass to community compositon
 ##need to run lf code in community_analyses
@@ -383,14 +430,6 @@ ggplot(data=subset(dpave, treat=="recovery"), aes(x=as.factor(calendar_year), y=
 #linking cover composition of plots with control-treat production differences
 
 #looking at all compositonal and fucntional (life forms) differences
-dpdiff<-dp2%>%
-    select(-disc, -sqrt.hgt)%>%
-    spread(type, anpp)%>%
-    mutate(diff=(drought-control)/control)%>%
-  rename(calendar_year=Year)%>%
-  mutate(plotnum=as.character(plotnum))%>%
-  select(calendar_year, plotnum, Trt, treatment, diff)
-
 
 ##here I am correlating differences in production to differences in composition based on species and composition based on functional types. THere is nothing here. 
 diff_comp<-dpdiff%>%
