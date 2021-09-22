@@ -396,13 +396,13 @@ dpdiffmeans<-dpdiff%>%
 ggplot(dpdiffmeans, aes(x=trt2, y=mean, fill=Trt))+
   geom_bar(stat="identity", position = position_dodge(0.9))+
   geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position = position_dodge(0.9), width=0.1)+
-  facet_wrap(~treatment, ncol=1)+
+  facet_wrap(~treatment)+
   scale_fill_manual(name="Treatment", breaks=c("Control", "P", "N", "P&N"),  values=c("black", "blue", "red", "purple"))+
   scale_x_discrete(labels=c("Control", "P", "N", "N+P"))+
   theme(panel.grid.major=element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90))+
   geom_hline(yintercept = 0)+
-  ylab("ANPP differences due to drought")+
-  xlab("Nutrient Treatment")+
+  ylab("ANPP differences")+
+  xlab("Nutrient treatment")+
   theme(legend.position = "none")
 
 ##by treatment and time - can put this in an appendix
@@ -415,10 +415,10 @@ dpdiffmeans_time<-dpdiff%>%
 ggplot(subset(dpdiffmeans_time, treatment=="Recovery years"), aes(x=as.factor(calendar_year), y=mean, color=trt2))+
   geom_point(size=3)+
   geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.1)+
-  scale_color_manual(name="Treatment", breaks=c("Control", "P", "N", "P&N"), label=c("Control", "P", "N", "N+P"), values=c("black", "blue", "red", "purple"))+
+  scale_color_manual(name="Nutrient treatment", breaks=c("Control", "P", "N", "P&N"), label=c("Control", "P", "N", "N+P"), values=c("black", "blue", "red", "purple"))+
   theme(panel.grid.major=element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90))+
   geom_hline(yintercept = 0)+
-  ylab("ANPP differences due to drought")+
+  ylab("ANPP differences")+
   xlab("Year")+
   geom_line(aes(group=trt2))
 
@@ -434,25 +434,30 @@ ggplot(subset(dpdiffmeans_time, treatment=="Recovery years"), aes(x=as.factor(ca
 ##here I am correlating differences in production to differences in composition based on species and composition based on functional types. THere is nothing here. 
 diff_comp<-dpdiff%>%
   left_join(multdiff)%>%
-  mutate(type="species")
+  mutate(type="Species")
 
 diff_func<-dpdiff%>%
   left_join(multdiff_func)%>%
-  mutate(type="functional")%>%
-  bind_rows(diff_comp)
+  mutate(type="Func. type")%>%
+  bind_rows(diff_comp)%>%
+  mutate(type2=factor(type, levels=c("Species", "Func. type")))
 
 
-with(subset(diff_comp, treatment=="recovery"&type=="species"), cor.test(diff, composition_diff))
-with(subset(diff_comp, treatment=="treatment"&type=="species"), cor.test(diff, composition_diff))
-with(subset(diff_func, treatment=="recovery"&type=="functional"), cor.test(diff, composition_diff))
-with(subset(diff_func, treatment=="treatment"&type=="functional"), cor.test(diff, composition_diff))
+cor<-diff_func%>%
+  group_by(treatment, type)%>%
+  summarize(r=round(cor.test(diff, composition_diff)$estimate,3),
+            p=round(cor.test(diff, composition_diff)$p.value,3))%>%
+  mutate(adjp=p.adjust(p, method = "BH"))
 
 ggplot(data=diff_func, aes(x=composition_diff, y=diff))+
-  geom_point()+
-  geom_smooth(method="lm")+
-  facet_grid(type~treatment)+
-  geom_hline(yintercept=0)
-
+  geom_point(aes(color=Trt))+
+  geom_smooth(data=subset(diff_func, treatment=="Drought years"), method="lm", color="black", se=F)+
+  scale_color_manual(name="Nutrient treatment", breaks=c("Control", "P", "N", "P&N"), label=c("Control", "P", "N", "N+P"), values=c("black", "blue", "red", "purple"))+
+  facet_grid(type2~treatment)+
+  geom_hline(yintercept=0)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  xlab("Compositional difference")+
+  ylab("ANPP difference")
 
 
 #tried doing this with the diff in production and the cover of LF in the treated plots. No longer want to do it this way. 
