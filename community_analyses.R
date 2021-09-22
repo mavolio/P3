@@ -212,23 +212,30 @@ emmeans(mult.d, pairwise~as.factor(calendar_year), adjust="holm")
 
 mult.r <- lmer(composition_diff~Trt*as.factor(calendar_year) + (1|plotnum), data=subset(multdiff, treat=="Recovery years"))
 anova(mult.r, ddf="Kenward-Roger")
-emmeans(sp.d, pairwise~Trt, adjust="holm")
+emmeans(mult.r, pairwise~Trt, adjust="holm")
 
 multdiff_means<-multdiff%>%
   group_by(Trt, calendar_year)%>%
   summarize(mean=mean(composition_diff), sd=sd(composition_diff))%>%
   mutate(se=sd/sqrt(6))%>%
-  mutate(data="Species comp.")
+  mutate(data="Species")
+
+
+multdiff_means2<-multdiff%>%
+  group_by(Trt, treat)%>%
+  summarize(mean=mean(composition_diff), sd=sd(composition_diff))%>%
+  mutate(se=sd/sqrt(6))%>%
+  mutate(data="Species")
   
-ggplot(data=multdiff_means, aes(x=calendar_year, y=mean, color=Trt))+
-  geom_point(size=3)+
-  geom_line()+
-  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.2)+
-  scale_color_manual(name="Treatment", breaks=c("Control", "P", "N", "P&N"), label=c("Control", "P", "N", "N+P"), values=c("black", "blue", "red", "purple"))+
-  geom_vline(xintercept=2012.5)+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  ylab("Compostitional Diff.\nControl-Drought")+
-  xlab("Year")
+# ggplot(data=multdiff_means, aes(x=calendar_year, y=mean, color=Trt))+
+#   geom_point(size=3)+
+#   geom_line()+
+#   geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.2)+
+#   scale_color_manual(name="Treatment", breaks=c("Control", "P", "N", "P&N"), label=c("Control", "P", "N", "N+P"), values=c("black", "blue", "red", "purple"))+
+#   geom_vline(xintercept=2012.5)+
+#   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+#   ylab("Compostitional Diff.\nControl-Drought")+
+#   xlab("Year")
 
 #I am not going to do this, I think what I have now is more interesting.
 # ###doing NMDS
@@ -397,24 +404,47 @@ emmeans(multf.d, pairwise~as.factor(calendar_year), adjust="holm")
 
 multf.r <- lmer(composition_diff~Trt*as.factor(calendar_year) + (1|plotnum), data=subset(multdiff_func, treat=="Recovery years"))
 anova(multf.r, ddf="Kenward-Roger")
+emmeans(multf.r, pairwise~Trt|as.factor(calendar_year), adjust="holm")
 
 multdiff_func_means<-multdiff_func%>%
   group_by(Trt, calendar_year)%>%
   summarize(mean=mean(composition_diff), sd=sd(composition_diff))%>%
   mutate(se=sd/sqrt(6))%>%
-  mutate(data="Trait comp.")%>%
-  bind_rows(multdiff_means)
+  mutate(data="Func. type")%>%
+  bind_rows(multdiff_means)%>%
+  mutate(type=factor(data, levels=c("Species", "Func. type")))
 
+#fig for appendix
 ggplot(data=multdiff_func_means, aes(x=calendar_year, y=mean, color=Trt))+
   geom_point(size=3)+
   geom_line()+
   geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.2)+
-  scale_color_manual(name="Treatment", breaks=c("Control", "P", "N", "P&N"), label=c("Control", "P", "N", "N+P"), values=c("black", "blue", "red", "purple"))+
+  scale_color_manual(name="Nutrient treatment", breaks=c("Control", "P", "N", "P&N"), label=c("Control", "P", "N", "N+P"), values=c("black", "blue", "red", "purple"))+
   geom_vline(xintercept=2012.5)+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   ylab("Compositional Difference")+
   xlab("Year")+
-  facet_wrap(~data, ncol=1)
+  facet_wrap(~type, ncol=1)
+
+multdiff_func_means2<-multdiff_func%>%
+  group_by(Trt, treat)%>%
+  summarize(mean=mean(composition_diff), sd=sd(composition_diff))%>%
+  mutate(se=sd/sqrt(6))%>%
+  mutate(data="Func. type")%>%
+  bind_rows(multdiff_means2)%>%
+  mutate(type=factor(data, levels=c("Species", "Func. type")))%>%
+  mutate(stat=ifelse(type=="Species"&treat=="Recovery years"&Trt=="Control"|type=="Func. type"&treat=="Recovery years"&Trt=="Control"|type=="Func. type"&treat=="Recovery years"&Trt=="P", "B", ifelse(type=="Species"&treat=="Recovery years"&Trt=="P&N"|type=="Func. type"&treat=="Recovery years"&Trt=="N"|type=="Func. type"&treat=="Recovery years"&Trt=="P&N", "A", ifelse(type=="Species"&treat=="Recovery years"&Trt=="P"|type=="Species"&treat=="Recovery years"&Trt=="N", "AB", ""))))
+
+ggplot(data=multdiff_func_means2, aes(x=Trt, y=mean, fill=Trt, label=stat))+
+  geom_bar(stat="identity", position=position_dodge(0.9))+
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position=position_dodge(0.9), width=0.2)+
+  scale_fill_manual(name="Nutrient treatment", breaks=c("Control", "P", "N", "P&N"), label=c("Control", "P", "N", "N+P"), values=c("black", "blue", "red", "purple"))+
+  scale_x_discrete(limits=c("Control", "P", "N", "P&N"), label=c("Control", "P", "N", "N+P"))+
+  facet_grid(type~treat)+
+  xlab("Nutrient treatment")+
+  ylab("Compositional difference")+
+  theme(legend.position = "none", panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_text(aes(y=(mean+se)+0.05))
 
 
 ###overall fig of RAC of funcational gropus and N+P and Control treatments - this was for ESA talk
@@ -473,35 +503,39 @@ meandiffabund<-diff_abund_fill%>%
   mutate(se=sd/sqrt(n))%>%
   mutate(trt2=factor(Trt, levels=c("Control", "P", "N", "P&N")))
 
-ggplot(meandiffabund, aes(x=calendar_year, y=mean, color=Trt))+
-  geom_point()+
-  geom_line()+
-  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.1)+
-  facet_wrap(~trait_cat, ncol=2)+
-  scale_color_manual(name="Treatment", breaks=c("Control", "P", "N", "P&N"), label=c("Control", "P", "N", "N+P"), values=c("black", "blue", "red", "purple"))+
-  theme(panel.grid.major=element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90))+
-  geom_vline(xintercept = 2012.5)+
-  geom_hline(yintercept = 0)+
-  ylab("Cover differences due to drought")+
-  xlab("Nutrient Treatment")
+# ggplot(meandiffabund, aes(x=calendar_year, y=mean, color=Trt))+
+#   geom_point()+
+#   geom_line()+
+#   geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.1)+
+#   facet_wrap(~trait_cat, ncol=2)+
+#   scale_color_manual(name="Treatment", breaks=c("Control", "P", "N", "P&N"), label=c("Control", "P", "N", "N+P"), values=c("black", "blue", "red", "purple"))+
+#   theme(panel.grid.major=element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90))+
+#   geom_vline(xintercept = 2012.5)+
+#   geom_hline(yintercept = 0)+
+#   ylab("Cover differences due to drought")+
+#   xlab("Nutrient Treatment")
 
 #other approach to figure
 meandiffabund2<-diff_abund_fill%>%
   group_by(treat, Trt, trait_cat)%>%
   summarize(mean=mean(difference), sd=sd(difference), n=length(difference))%>%
   mutate(se=sd/sqrt(n))%>%
-  mutate(trt2=factor(Trt, levels=c("Control", "P", "N", "P&N")))
+  mutate(trt2=factor(Trt, levels=c("Control", "P", "N", "P&N")))%>%
+  mutate(stat=ifelse(trait_cat=="C3 Gram."&treat=="Drought years"&Trt=="Control"|trait_cat=="C4 Gram."&treat=="Drought years"&Trt=="P&N"|trait_cat=="Non-N-Fixing Forb"&treat=="Drought years"&Trt=="Control"|trait_cat=="Non-N-Fixing Forb"&treat=="Drought years"&Trt=="P"|trait_cat=="C4 Gram."&treat=="Recovery years"&Trt=="Control"|trait_cat=="C4 Gram."&treat=="Recovery years"&Trt=="P"|trait_cat=="C4 Gram."&treat=="Recovery years"&Trt=="P&N", "A",                                                         ifelse(trait_cat=="C3 Gram."&treat=="Drought years"&Trt=="N"|trait_cat=="C4 Gram."&treat=="Drought years"&Trt=="Control"|trait_cat=="C4 Gram."&treat=="Drought years"&Trt=="P"|trait_cat=="C4 Gram."&treat=="Drought years"&Trt=="N"|trait_cat=="C4 Gram."&treat=="Recovery years"&Trt=="N"|trait_cat=="Non-N-Fixing Forb"&treat=="Drought years"&Trt=="P&N", "B",  
+        ifelse(trait_cat=="C3 Gram."&treat=="Drought years"&Trt=="P&N"|trait_cat=="C3 Gram."&treat=="Drought years"&Trt=="P"|trait_cat=="Non-N-Fixing Forb"&treat=="Drought years"&Trt=="N","AB", ""))))
 
-ggplot(meandiffabund2, aes(x=trt2, y=mean, fill=Trt))+
+ggplot(meandiffabund2, aes(x=trt2, y=mean, fill=Trt, label=stat))+
   geom_bar(stat="identity", position = position_dodge(0.9))+
   geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position = position_dodge(0.9), width=0.1)+
   facet_grid(treat~trait_cat)+
   scale_fill_manual(name="Treatment", breaks=c("Control", "P", "N", "P&N"), label=c("Control", "P", "N", "N+P"), values=c("black", "blue", "red", "purple"))+
   theme(panel.grid.major=element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90))+
+  scale_x_discrete(limits=c("Control", "P", "N", "P&N"), label=c("Control", "P", "N", "N+P"))+
   geom_hline(yintercept = 0)+
-  ylab("Cover differences due to drought")+
-  xlab("Nutrient Treatment")+
-  theme(legend.position = "none")
+  ylab("Cover differences")+
+  xlab("Nutrient treatment")+
+  theme(legend.position = "none")+
+  geom_text(aes(y=(mean-se)-4))
 
 abund.d <- lmer(difference~Trt*trait_cat*as.factor(calendar_year) + (1|plotnum), data=subset(diff_abund_fill, treat=="Drought years"))
 anova(abund.d, ddf="Kenward-Roger")
