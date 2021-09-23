@@ -447,25 +447,27 @@ ggplot(data=multdiff_func_means2, aes(x=Trt, y=mean, fill=Trt, label=stat))+
   geom_text(aes(y=(mean+se)+0.05))
 
 
-###overall fig of RAC of funcational gropus and N+P and Control treatments - this was for ESA talk
-# lfoverall<-lf%>%
-#   filter(Trt=="Control"|Trt=="P&N", precip=="control")%>%
-#   group_by(Trt, trait_cat)%>%
-#   summarize(mean=mean(relcov), sd=sd(relcov), n=length(relcov))%>%
-#   mutate(se=sd/sqrt(n))%>%
-#   filter(trait_cat!="NA")%>%
-#   mutate(rank=rank(-mean))
-# 
-# trtlab<-c(Control="Control", 'P&N'="N+P")
-# 
-# ggplot(lfoverall, aes(x=rank, y=mean))+
-#   geom_line()+
-#   geom_point(size=5, aes(color=trait_cat))+
-#   scale_color_manual(name="Functional Type", values=c("darkgreen", "chartreuse3", "green", "darkblue", "lightblue", "deepskyblue"), breaks = c("C4 Gram.", "C3 Gram.",  "Annual Gram.","Non-N-Fixing Forb", "N-Fixing Forb", "Annual Forb"))+
-#   xlab("Rank")+
-#   ylab("Relative Cover")+
-#   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-#   facet_wrap(~Trt, labeller = labeller(Trt=trtlab), ncol=1)
+##overall fig of RAC of funcational gropus and N+P and Control treatments - this was for ESA talk
+lfoverall<-lf%>%
+  filter(precip=="control")%>%
+  group_by(Trt, trait_cat)%>%
+  summarize(mean=mean(relcov))%>%
+  filter(trait_cat!="NA")%>%
+  mutate(rank=rank(-mean))%>%
+  mutate(trt2=factor(Trt, levels=c("Control", "P", "N", "P&N")))
+
+trtlab<-c("Control"="Control", 'P'="P", 'N'='N', 'P&N'="N+P")
+
+rac_func<-
+  ggplot(lfoverall, aes(x=rank, y=mean))+
+  geom_line()+
+  geom_point(size=5, aes(color=trait_cat))+
+  scale_color_manual(name="Functional Type", values=c("darkgreen", "chartreuse3", "green", "darkblue", "lightblue", "deepskyblue"), breaks = c("C4 Gram.", "C3 Gram.",  "Annual Gram.","Non-N-Fixing Forb", "N-Fixing Forb", "Annual Forb"))+
+  xlab("Rank")+
+  ylab("Relative Cover")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  facet_wrap(~trt2, labeller = labeller(trt2=trtlab))+
+  scale_x_continuous(limits=c(1,6), breaks=c(1:6))
 
 lf2<-p3plotcomp%>%
   mutate(trait_cat=ifelse(life=="A", 'Annual', ifelse(form=="F"|form=="S", "Forb",
@@ -545,4 +547,21 @@ abund.r <- lmer(difference~Trt*trait_cat*as.factor(calendar_year) + (1|plotnum),
 anova(abund.r, ddf="Kenward-Roger")
 emmeans(abund.r, pairwise~Trt|trait_cat, adjust="holm")
 
+##contingency analsysis
 
+anngram<-lf%>%
+  mutate(treat=ifelse(calendar_year<2013, "Drought years", "Recovery years"))%>%
+  group_by(Trt, plotnum, treat, precip, trait_cat)%>%
+  summarize(mean=mean(cov))%>%
+  filter(trait_cat!="NA")%>%
+  spread(trait_cat, mean, fill=0)%>%
+  gather(trait_cat, cov, 'Annual Forb':'Non-N-Fixing Forb')%>%
+  filter(trait_cat=="Annual Gram.",
+         treat=="Recovery years", 
+         precip=="drought")%>%
+  mutate(p=ifelse(cov>0, 1, 0))%>%
+  group_by(Trt)%>%
+  summarize(present=sum(p))%>%
+  mutate(absent=6-present)
+
+prop.test(x=as.matrix(anngram[c('present', 'absent')]), alternative='two.sided')  
