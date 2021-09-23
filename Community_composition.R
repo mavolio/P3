@@ -103,8 +103,10 @@ ggplot(data=racave, aes(x=rank, y=mabund, label=name))+
   xlab("Rank")
 
 #bind both figures together.
-grid.arrange(NMDS, rac)
+grid.arrange(NMDS, rac_func)
 
+#run RAC func code in community analyses.
+grid.arrange(NMDS, rac_func)
 #plot changes over time ESA talk
 
 allpp<-read.csv(paste(my.wd, "/pplots/Sppcomp/Species Comp_to Use/Compiling Datasets in R/Spp_Data_2002_2019.csv", sep = ""))%>%
