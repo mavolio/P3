@@ -435,7 +435,7 @@ multdiff_func_means2<-multdiff_func%>%
   mutate(type=factor(data, levels=c("Species", "Func. type")))%>%
   mutate(stat=ifelse(type=="Species"&treat=="Recovery years"&Trt=="Control"|type=="Func. type"&treat=="Recovery years"&Trt=="Control"|type=="Func. type"&treat=="Recovery years"&Trt=="P", "B", ifelse(type=="Species"&treat=="Recovery years"&Trt=="P&N"|type=="Func. type"&treat=="Recovery years"&Trt=="N"|type=="Func. type"&treat=="Recovery years"&Trt=="P&N", "A", ifelse(type=="Species"&treat=="Recovery years"&Trt=="P"|type=="Species"&treat=="Recovery years"&Trt=="N", "AB", ""))))
 
-ggplot(data=multdiff_func_means2, aes(x=Trt, y=mean, fill=Trt, label=stat))+
+a<-ggplot(data=multdiff_func_means2, aes(x=Trt, y=mean, fill=Trt, label=stat))+
   geom_bar(stat="identity", position=position_dodge(0.9))+
   geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position=position_dodge(0.9), width=0.2)+
   scale_fill_manual(name="Nutrient treatment", breaks=c("Control", "P", "N", "P&N"), label=c("Control", "P", "N", "N+P"), values=c("black", "blue", "red", "purple"))+
@@ -444,7 +444,8 @@ ggplot(data=multdiff_func_means2, aes(x=Trt, y=mean, fill=Trt, label=stat))+
   xlab("Nutrient treatment")+
   ylab("Compositional difference")+
   theme(legend.position = "none", panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  geom_text(aes(y=(mean+se)+0.05))
+  geom_text(aes(y=(mean+se)+0.05))+
+  ggtitle("A)")
 
 
 ##overall fig of RAC of funcational gropus and N+P and Control treatments - this was for ESA talk
@@ -526,7 +527,7 @@ meandiffabund2<-diff_abund_fill%>%
   mutate(stat=ifelse(trait_cat=="C3 Gram."&treat=="Drought years"&Trt=="Control"|trait_cat=="C4 Gram."&treat=="Drought years"&Trt=="P&N"|trait_cat=="Non-N-Fixing Forb"&treat=="Drought years"&Trt=="Control"|trait_cat=="Non-N-Fixing Forb"&treat=="Drought years"&Trt=="P"|trait_cat=="C4 Gram."&treat=="Recovery years"&Trt=="Control"|trait_cat=="C4 Gram."&treat=="Recovery years"&Trt=="P"|trait_cat=="C4 Gram."&treat=="Recovery years"&Trt=="P&N", "A",                                                         ifelse(trait_cat=="C3 Gram."&treat=="Drought years"&Trt=="N"|trait_cat=="C4 Gram."&treat=="Drought years"&Trt=="Control"|trait_cat=="C4 Gram."&treat=="Drought years"&Trt=="P"|trait_cat=="C4 Gram."&treat=="Drought years"&Trt=="N"|trait_cat=="C4 Gram."&treat=="Recovery years"&Trt=="N"|trait_cat=="Non-N-Fixing Forb"&treat=="Drought years"&Trt=="P&N", "B",  
         ifelse(trait_cat=="C3 Gram."&treat=="Drought years"&Trt=="P&N"|trait_cat=="C3 Gram."&treat=="Drought years"&Trt=="P"|trait_cat=="Non-N-Fixing Forb"&treat=="Drought years"&Trt=="N","AB", ""))))
 
-ggplot(meandiffabund2, aes(x=trt2, y=mean, fill=Trt, label=stat))+
+b<-ggplot(meandiffabund2, aes(x=trt2, y=mean, fill=Trt, label=stat))+
   geom_bar(stat="identity", position = position_dodge(0.9))+
   geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position = position_dodge(0.9), width=0.1)+
   facet_grid(treat~trait_cat)+
@@ -537,7 +538,10 @@ ggplot(meandiffabund2, aes(x=trt2, y=mean, fill=Trt, label=stat))+
   ylab("Cover differences")+
   xlab("Nutrient treatment")+
   theme(legend.position = "none")+
-  geom_text(aes(y=(mean-se)-4))
+  geom_text(aes(y=(mean-se)-4))+
+  ggtitle("B)")
+
+grid.arrange(a,b)
 
 abund.d <- lmer(difference~Trt*trait_cat*as.factor(calendar_year) + (1|plotnum), data=subset(diff_abund_fill, treat=="Drought years"))
 anova(abund.d, ddf="Kenward-Roger")
