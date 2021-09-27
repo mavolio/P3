@@ -393,7 +393,7 @@ dpdiffmeans<-dpdiff%>%
   mutate(se=sd/sqrt(n))%>%
   mutate(trt2=factor(Trt, levels=c("Control", "P", "N", "P&N")))
 
-ggplot(dpdiffmeans, aes(x=trt2, y=mean, fill=Trt))+
+a<-ggplot(dpdiffmeans, aes(x=trt2, y=mean, fill=Trt))+
   geom_bar(stat="identity", position = position_dodge(0.9))+
   geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position = position_dodge(0.9), width=0.1)+
   facet_wrap(~treatment)+
@@ -403,7 +403,8 @@ ggplot(dpdiffmeans, aes(x=trt2, y=mean, fill=Trt))+
   geom_hline(yintercept = 0)+
   ylab("ANPP differences")+
   xlab("Nutrient treatment")+
-  theme(legend.position = "none")
+  theme(legend.position = "none")+
+  ggtitle("A)")
 
 ##by treatment and time - can put this in an appendix
 dpdiffmeans_time<-dpdiff%>%
@@ -449,17 +450,18 @@ cor<-diff_func%>%
             p=round(cor.test(diff, composition_diff)$p.value,3))%>%
   mutate(adjp=p.adjust(p, method = "BH"))
 
-ggplot(data=diff_func, aes(x=composition_diff, y=diff))+
+b<-ggplot(data=diff_func, aes(x=composition_diff, y=diff))+
   geom_point(aes(color=Trt))+
   geom_smooth(data=subset(diff_func, treatment=="Drought years"), method="lm", color="black", se=F)+
   scale_color_manual(name="Nutrient treatment", breaks=c("Control", "P", "N", "P&N"), label=c("Control", "P", "N", "N+P"), values=c("black", "blue", "red", "purple"))+
   facet_grid(type2~treatment)+
   geom_hline(yintercept=0)+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "top")+
   xlab("Compositional difference")+
-  ylab("ANPP difference")
+  ylab("ANPP difference")+
+  ggtitle("B)")
 
-
+grid.arrange(a, b, heights=c(1.5,2))
 #tried doing this with the diff in production and the cover of LF in the treated plots. No longer want to do it this way. 
 
 # diff<-dpdiff%>%
