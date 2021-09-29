@@ -58,7 +58,8 @@ ggplot(data=scores, aes(x=MDS1, y=MDS2, color=Trt, label=label))+
   scale_color_manual(name="Nutrient treatment", values = c("black", "blue", "red", "purple"), breaks=c("Control", "P", "N", "P&N"), labels=c("Control", "P", "N", "N+P"))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   ylab("NMDS2")+
-  xlab("NMDS1")
+  xlab("NMDS1")+
+  annotate("text", x = 0.5, y = -.5, label="Stress = 0.14")
 
 #permanova
 adonis(compwide[3:73]~compwide$Trt)
@@ -76,9 +77,9 @@ racave<-ave%>%
   mutate(rank=rank(-mabund, ties.method = "first"))%>%
   left_join(cattraits)%>%
   mutate(trait_cat=ifelse(growthform=="F"&lifespan=="A", "Annual Forb",
-                   ifelse(growthform=="G"&lifespan=="A", "Annual Gram.",
+                   ifelse(growthform=="G"&lifespan=="A", "Annual Grass",
                    ifelse(growthform=="G"&photopath=="C3", "C3 Gram.",
-                   ifelse(growthform=="G"&photopath=="C4", "C4 Gram.",
+                   ifelse(growthform=="G"&photopath=="C4", "C4 Grass",
                    ifelse(growthform=='F'|growthform=="S"&Nfix=="N", "Non-N-Fixing Forb",
                    ifelse(growthform=='F'|growthform=="S"&Nfix=="Y", "N-Fixing Forb","UNK")))))))%>%
   separate(genus_species, into=c("genus", "species"), sep="_")%>%
@@ -103,10 +104,14 @@ ggplot(data=racave, aes(x=rank, y=mabund, label=name))+
   xlab("Rank")
 
 #bind both figures together.
-grid.arrange(NMDS, rac_func)
+grid.arrange(NMDS, rac)
 
 #run RAC func code in community analyses.
+
 grid.arrange(NMDS, rac_func)
+
+
+
 #plot changes over time ESA talk
 
 allpp<-read.csv(paste(my.wd, "/pplots/Sppcomp/Species Comp_to Use/Compiling Datasets in R/Spp_Data_2002_2019.csv", sep = ""))%>%
@@ -134,9 +139,9 @@ aveall<-allpp%>%
 ractime<-aveall%>%
   left_join(cattraits)%>%
   mutate(trait_cat=ifelse(growthform=="F"&lifespan=="A", "Annual Forb",
-                          ifelse(growthform=="G"&lifespan=="A", "Annual Gram.",
+                          ifelse(growthform=="G"&lifespan=="A", "Annual Grass",
                                  ifelse(growthform=="G"&photopath=="C3", "C3 Gram.",
-                                        ifelse(growthform=="G"&photopath=="C4", "C4 Gram.",
+                                        ifelse(growthform=="G"&photopath=="C4", "C4 Grass",
                                                ifelse(growthform=='F'|growthform=="S"&Nfix=="N", "Non-N-Fixing Forb",
                                                       ifelse(growthform=='F'|growthform=="S"&Nfix=="Y", "N-Fixing Forb","UNK")))))))%>%
   group_by(trait_cat, calendar_year, treatment)%>%
