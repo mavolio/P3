@@ -351,9 +351,9 @@ totcov<-comp%>%
 
 lf<-p3plotcomp%>%
 mutate(trait_cat=ifelse(form=="F"&life=="A", "Annual Forb",
-                        ifelse(form=="G"&life=="A", "Annual Gram.",
+                        ifelse(form=="G"&life=="A", "Annual Grass",
                                ifelse(form=="G"&C3_C4=="C3", "C3 Gram.",
-                                      ifelse(form=="G"&C3_C4=="C4", "C4 Gram.",
+                                      ifelse(form=="G"&C3_C4=="C4", "C4 Grass",
                                              ifelse(form=='F'|form=="S"&n_fixer=="N", "Non-N-Fixing Forb",
                                                     ifelse(form=='F'|form=="S"&n_fixer=="Y", "N-Fixing Forb","UNK")))))))%>%
   left_join(treats)%>%
@@ -463,7 +463,7 @@ rac_func<-
   ggplot(lfoverall, aes(x=rank, y=mean))+
   geom_line()+
   geom_point(size=5, aes(color=trait_cat))+
-  scale_color_manual(name="Functional Type", values=c("darkgreen", "chartreuse3", "green", "darkblue", "lightblue", "deepskyblue"), breaks = c("C4 Gram.", "C3 Gram.",  "Annual Gram.","Non-N-Fixing Forb", "N-Fixing Forb", "Annual Forb"))+
+  scale_color_manual(name="Functional Type", values=c("darkgreen", "chartreuse3", "green", "darkblue", "lightblue", "deepskyblue"), breaks = c("C4 Grass", "C3 Gram.",  "Annual Grass","Non-N-Fixing Forb", "N-Fixing Forb", "Annual Forb"))+
   xlab("Rank")+
   ylab("Relative Cover")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
@@ -524,7 +524,7 @@ meandiffabund2<-diff_abund_fill%>%
   summarize(mean=mean(difference), sd=sd(difference), n=length(difference))%>%
   mutate(se=sd/sqrt(n))%>%
   mutate(trt2=factor(Trt, levels=c("Control", "P", "N", "P&N")))%>%
-  mutate(stat=ifelse(trait_cat=="C3 Gram."&treat=="Drought years"&Trt=="Control"|trait_cat=="C4 Gram."&treat=="Drought years"&Trt=="P&N"|trait_cat=="Non-N-Fixing Forb"&treat=="Drought years"&Trt=="Control"|trait_cat=="Non-N-Fixing Forb"&treat=="Drought years"&Trt=="P"|trait_cat=="C4 Gram."&treat=="Recovery years"&Trt=="Control"|trait_cat=="C4 Gram."&treat=="Recovery years"&Trt=="P"|trait_cat=="C4 Gram."&treat=="Recovery years"&Trt=="P&N", "A",                                                         ifelse(trait_cat=="C3 Gram."&treat=="Drought years"&Trt=="N"|trait_cat=="C4 Gram."&treat=="Drought years"&Trt=="Control"|trait_cat=="C4 Gram."&treat=="Drought years"&Trt=="P"|trait_cat=="C4 Gram."&treat=="Drought years"&Trt=="N"|trait_cat=="C4 Gram."&treat=="Recovery years"&Trt=="N"|trait_cat=="Non-N-Fixing Forb"&treat=="Drought years"&Trt=="P&N", "B",  
+  mutate(stat=ifelse(trait_cat=="C3 Gram."&treat=="Drought years"&Trt=="Control"|trait_cat=="C4 Grass"&treat=="Drought years"&Trt=="P&N"|trait_cat=="Non-N-Fixing Forb"&treat=="Drought years"&Trt=="Control"|trait_cat=="Non-N-Fixing Forb"&treat=="Drought years"&Trt=="P"|trait_cat=="C4 Grass"&treat=="Recovery years"&Trt=="Control"|trait_cat=="C4 Grass"&treat=="Recovery years"&Trt=="P"|trait_cat=="C4 Grass"&treat=="Recovery years"&Trt=="P&N", "A",                                                         ifelse(trait_cat=="C3 Gram."&treat=="Drought years"&Trt=="N"|trait_cat=="C4 Grass"&treat=="Drought years"&Trt=="Control"|trait_cat=="C4 Grass"&treat=="Drought years"&Trt=="P"|trait_cat=="C4 Grass"&treat=="Drought years"&Trt=="N"|trait_cat=="C4 Grass"&treat=="Recovery years"&Trt=="N"|trait_cat=="Non-N-Fixing Forb"&treat=="Drought years"&Trt=="P&N", "B",  
         ifelse(trait_cat=="C3 Gram."&treat=="Drought years"&Trt=="P&N"|trait_cat=="C3 Gram."&treat=="Drought years"&Trt=="P"|trait_cat=="Non-N-Fixing Forb"&treat=="Drought years"&Trt=="N","AB", ""))))
 
 b<-ggplot(meandiffabund2, aes(x=trt2, y=mean, fill=Trt, label=stat))+
@@ -541,7 +541,7 @@ b<-ggplot(meandiffabund2, aes(x=trt2, y=mean, fill=Trt, label=stat))+
   geom_text(aes(y=(mean-se)-4))+
   ggtitle("B)")
 
-grid.arrange(a,b)
+grid.arrange(a,b, heights=c(1.5, 2))
 
 abund.d <- lmer(difference~Trt*trait_cat*as.factor(calendar_year) + (1|plotnum), data=subset(diff_abund_fill, treat=="Drought years"))
 anova(abund.d, ddf="Kenward-Roger")
