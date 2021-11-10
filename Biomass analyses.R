@@ -71,10 +71,11 @@ dp2<-merge(dp, treats, by=c("plot", "row"))%>%
 
 ##correlating DP with ANPP
 cor<-biomass%>%
-  left_join(dp2)
+  left_join(dp2)%>%
+  mutate(Type=ifelse(type=="control", "Un-droughted", "Droughted"))
 
 test<-cor%>%
-  group_by(type)%>%
+  group_by(Type)%>%
   summarize(r=round(cor.test(anpp, canpp)$estimate,3),
             p=round(cor.test(anpp, canpp)$p.value,3))%>%
   mutate(rpvalue=paste("r = ", r, ", p = ", p))
@@ -86,7 +87,7 @@ ggplot(data=cor, aes(x=canpp, y=anpp))+
   scale_x_continuous(limits=c(180,830))+
   ylab("Clipped ANPP")+
   xlab("Disc Pasture ANPP")+
-  facet_wrap(~type)+
+  facet_wrap(~Type)+
   geom_text(data=test, mapping=aes(x=800, y = 250, label = rpvalue), hjust=1.05, vjust=1.5)
 
 #for ESA
