@@ -42,7 +42,7 @@ biomass<-p2%>%
   select(calendar_year, anpp, Trt, type, plotnum)%>%
   filter(calendar_year==2011)
 
-##not going to include this data
+##going to include this data
 ##now looking at disc pasture data
 dp2011<-read.csv("C:/Users/mavolio2/Dropbox/Konza Research/P-cubed/DiscPasture/2011_dispachmeter.csv")%>%
   group_by(Year, plot, row, type)%>%
