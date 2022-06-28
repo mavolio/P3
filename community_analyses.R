@@ -34,110 +34,109 @@ richeven<-community_structure(comp, time.var="calendar_year", abundance.var="abu
   mutate(plotnum=as.integer(plotnum))%>%
   left_join(treats)%>%
   mutate(treat=ifelse(calendar_year<2013, "Drought years", "Recovery years"))
-# 
-# hist(richeven$richness)#this is normal
-# hist(log(richeven$Evar))#log transfrom even
-# 
-# #richness in plots in 2010
-# rich2010<-richeven%>%
-#   filter(calendar_year==2010&drought=="control")%>%
-#   group_by(Trt)%>%
-#   summarize(mean=mean(richness))
-# 
-# 
-# ##richness in drought
-# rich.d <- lmer(richness~Trt*drought*as.factor(calendar_year) + (1|plotnum), data=subset(richeven, treat=="Drought years"))
-# 
-# anova(rich.d, ddf="Kenward-Roger")
-# 
-# #doing contrasts
-# emmeans(rich.d, pairwise~Trt, adjust="holm")
-# 
-# #richness during recovery
-# rich.r <- lmer(richness~Trt*drought*as.factor(calendar_year) + (1|plotnum), data=subset(richeven, treat=="Recovery years"))
-# 
-# anova(rich.r, ddf="Kenward-Roger")
-# 
-# #doing contrasts
-# emmeans(rich.r, pairwise~Trt, adjust="holm")
-# 
-# ##evenness in drought
-# even.d <- lmer(log(Evar)~Trt*drought*as.factor(calendar_year) + (1|plotnum), data=subset(richeven, treat=="Drought years"))
-# anova(even.d, ddf="Kenward-Roger")
-# #doing contrasts
-# emmeans(even.d, pairwise~Trt, adjust="holm")
-# 
-# #richness during recovery
-# even.r <- lmer(log(Evar)~Trt*drought*as.factor(calendar_year) + (1|plotnum), data=subset(richeven, treat=="Recovery years"))
-# anova(even.r, ddf="Kenward-Roger")
-# 
-# richtoplot<-richeven%>%
-#   group_by(calendar_year, drought, Trt, treat)%>%
-#   summarise(mean=mean(richness), sd=sd(richness), n=length(richness))%>%
-#   mutate(se=sd/sqrt(n))%>%
-#   mutate(trt2=factor(Trt, levels=c("Control", "P", "N", "P&N")))
-# 
-# eventoplot<-richeven%>%
-#   group_by(drought, treat)%>%
-#   summarise(mean=mean(Evar), sd=sd(Evar), n=length(Evar))%>%
-#   mutate(se=sd/sqrt(n))
+
+hist(richeven$richness)#this is normal
+hist(log(richeven$Evar))#log transfrom even
+
+#richness in plots in 2010
+rich2010<-richeven%>%
+  filter(calendar_year==2010&drought=="control")%>%
+  group_by(Trt)%>%
+  summarize(mean=mean(richness))
 
 
-###doing as differences
-#richness
-diff_rich<-richeven%>%
-  select(calendar_year, plotnum, drought, richness, Trt, treat)%>%
-  spread(drought, richness)%>%
-  mutate(diff=drought-control)
+##richness in drought
+rich.d <- lmer(richness~Trt*drought*as.factor(calendar_year) + (1|plotnum), data=subset(richeven, treat=="Drought years"))
 
-rich.d <- lmer(diff~Trt*as.factor(calendar_year) + (1|plotnum), data=subset(diff_rich, treat=="Drought years"))
 anova(rich.d, ddf="Kenward-Roger")
 
-rich.r <- lmer(diff~Trt*as.factor(calendar_year) + (1|plotnum), data=subset(diff_rich, treat=="Recovery years"))
+#doing contrasts
+emmeans(rich.d, pairwise~drought|Trt, adjust="holm")
+
+#richness during recovery
+rich.r <- lmer(richness~Trt*drought*as.factor(calendar_year) + (1|plotnum), data=subset(richeven, treat=="Recovery years"))
+
 anova(rich.r, ddf="Kenward-Roger")
 
-#evenness
-diff_even<-richeven%>%
-  select(calendar_year, plotnum, drought, Evar, Trt, treat)%>%
-  spread(drought, Evar)%>%
-  mutate(diff=drought-control)
+#doing contrasts
+emmeans(rich.r, pairwise~Trt, adjust="holm")
 
-even.d <- lmer(diff~Trt*as.factor(calendar_year) + (1|plotnum), data=subset(diff_even, treat=="Drought years"))
+##evenness in drought
+even.d <- lmer(log(Evar)~Trt*drought*as.factor(calendar_year) + (1|plotnum), data=subset(richeven, treat=="Drought years"))
 anova(even.d, ddf="Kenward-Roger")
+#doing contrasts
+emmeans(even.d, pairwise~Trt, adjust="holm")
 
-even.r <- lmer(diff~Trt*as.factor(calendar_year) + (1|plotnum), data=subset(diff_even, treat=="Recovery years"))
+#richness during recovery
+even.r <- lmer(log(Evar)~Trt*drought*as.factor(calendar_year) + (1|plotnum), data=subset(richeven, treat=="Recovery years"))
 anova(even.r, ddf="Kenward-Roger")
 
-eventoplot<-diff_even%>%
-  group_by(calendar_year, treat)%>%
-  summarise(mean=mean(diff), sd=sd(diff), n=length(diff))%>%
+richtoplot<-richeven%>%
+  group_by(drought, Trt, treat)%>%
+  summarise(mean=mean(richness), sd=sd(richness), n=length(richness))%>%
+  mutate(se=sd/sqrt(n))%>%
+  mutate(trt2=factor(Trt, levels=c("Control", "P", "N", "P&N")))
+
+eventoplot<-richeven%>%
+  group_by(drought, treat)%>%
+  summarise(mean=mean(Evar), sd=sd(Evar), n=length(Evar))%>%
   mutate(se=sd/sqrt(n))
 
-ggplot(subset(eventoplot, treat=="Drought years"), aes(x=calendar_year, y=mean))+
-  geom_point()+
-  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.1)+
-  theme(panel.grid.major=element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90))+
-  geom_hline(yintercept = 0)+
-  ylab("Evenness differences due to drought")+
-  xlab("Year")+
-  geom_line()+
-  theme(legend.position = "none")
+
+# ###doing as differences
+# #richness
+# diff_rich<-richeven%>%
+#   select(calendar_year, plotnum, drought, richness, Trt, treat)%>%
+#   spread(drought, richness)%>%
+#   mutate(diff=drought-control)
+# 
+# rich.d <- lmer(diff~Trt*as.factor(calendar_year) + (1|plotnum), data=subset(diff_rich, treat=="Drought years"))
+# anova(rich.d, ddf="Kenward-Roger")
+# 
+# rich.r <- lmer(diff~Trt*as.factor(calendar_year) + (1|plotnum), data=subset(diff_rich, treat=="Recovery years"))
+# anova(rich.r, ddf="Kenward-Roger")
+# 
+# #evenness
+# diff_even<-richeven%>%
+#   select(calendar_year, plotnum, drought, Evar, Trt, treat)%>%
+#   spread(drought, Evar)%>%
+#   mutate(diff=drought-control)
+# 
+# even.d <- lmer(diff~Trt*as.factor(calendar_year) + (1|plotnum), data=subset(diff_even, treat=="Drought years"))
+# anova(even.d, ddf="Kenward-Roger")
+# 
+# even.r <- lmer(diff~Trt*as.factor(calendar_year) + (1|plotnum), data=subset(diff_even, treat=="Recovery years"))
+# anova(even.r, ddf="Kenward-Roger")
+# 
+# eventoplot<-diff_even%>%
+#   group_by(calendar_year, treat)%>%
+#   summarise(mean=mean(diff), sd=sd(diff), n=length(diff))%>%
+#   mutate(se=sd/sqrt(n))
+# 
+# ggplot(subset(eventoplot, treat=="Drought years"), aes(x=calendar_year, y=mean))+
+#   geom_point()+
+#   geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.1)+
+#   theme(panel.grid.major=element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90))+
+#   geom_hline(yintercept = 0)+
+#   ylab("Evenness differences due to drought")+
+#   xlab("Year")+
+#   geom_line()+
+#   theme(legend.position = "none")
 
          
-#          
-# trtlab<-c(Control="Control", P="P", N="N", 'P&N'="N+P")
-# 
-# ggplot(richtoplot, aes(x=calendar_year, y=mean, color=trt2, shape=drought))+
-#   geom_point(size=5)+
-#   geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.2)+
-#   facet_wrap(~trt2, labeller =labeller(trt2=trtlab))+
-#   geom_line()+
-#   scale_color_manual(name="Treatment", values=c("black", "blue", "red", "purple"), breaks = c("Control", "P", "N","P&N"))+
-#   scale_shape_manual(name="Droughted", labels=c("No", 'Yes'), values=c(19,17))+
-#   geom_vline(xintercept=2012.5)+
-#   theme(panel.grid.major=element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90))+
-#   ylab("Species Richness")+
-#   xlab("Year")
+
+trtlab<-c(Control="Control", P="P", N="N", 'P&N'="N+P")
+
+ggplot(richtoplot, aes(x=trt2, y=mean, fill=drought))+
+  geom_bar(stat='identity', position=position_dodge())+
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.2, position = position_dodge(0.9))+
+  facet_wrap(~trt2, labeller =labeller(trt2=trtlab))+
+  geom_line()+
+  #scale_color_manual(name="Treatment", values=c("black", "blue", "red", "purple"), breaks = c("Control", "P", "N","P&N"))+
+  theme(panel.grid.major=element_blank(), panel.grid.minor = element_blank())+
+  ylab("Species Richness")+
+  xlab("Nutrient Treatment")+
+  facet_wrap(~treat)
 # 
 
 
@@ -206,6 +205,9 @@ multdiff<-multivariate_difference(comp2, time.var="calendar_year", species.var="
   mutate(treat=ifelse(calendar_year<2013, "Drought years", "Recovery years"))
 
 ##
+
+even.r <- lmer(log(Evar)~Trt*drought*as.factor(calendar_year) + (1|plotnum), data=subset(richeven, treat=="Recovery years"))
+anova(even.r, ddf="Kenward-Roger")
 mult.d <- lmer(composition_diff~Trt*as.factor(calendar_year) + (1|plotnum), data=subset(multdiff, treat=="Drought years"))
 anova(mult.d, ddf="Kenward-Roger")
 emmeans(mult.d, pairwise~as.factor(calendar_year), adjust="holm")
@@ -364,7 +366,46 @@ mutate(trait_cat=ifelse(form=="F"&life=="A", "Annual Forb",
   mutate(unid=paste(plotnum, precip, sep="_"), 
          unidt=paste(Trt, precip, sep="_"),
          unid3=paste(plotnum, Trt, precip, sep="_"))%>%
-  na.omit
+  na.omit 
+
+lf_stat<-lf%>% 
+  mutate(treat=ifelse(calendar_year<2013, "Drought years", "Recovery years")) %>% 
+  select(plotnum, Trt, precip, calendar_year, treat, trait_cat, cov) %>% 
+  pivot_wider(names_from="trait_cat", values_from="cov", values_fill=0) %>% 
+  pivot_longer("Annual Forb":"Annual Grass", names_to="trait_cat", values_to = "cov")
+
+
+###looking at cover differences of lf through time
+lfcov.d <- lmer(cov~Trt*precip*trait_cat*as.factor(calendar_year) + (1|plotnum), data=subset(lf_stat, treat=="Drought years"))
+anova(lfcov.d, ddf="Kenward-Roger")
+#doing contrasts
+emmeans(lfcov.d, pairwise~precip|Trt|trait_cat, adjust="holm")
+
+lfcov.r <- lmer(cov~Trt*precip*trait_cat*as.factor(calendar_year) + (1|plotnum), data=subset(lf_stat, treat=="Recovery years"))
+anova(lfcov.r, ddf="Kenward-Roger")
+emmeans(lfcov.r, pairwise~precip|Trt|trait_cat, adjust="holm")
+
+lfave<-lf_stat%>%
+  mutate(calendar_year=as.integer(as.character(calendar_year)))%>%
+  mutate(drought=ifelse(precip=="control", "n", "y"))%>%
+  group_by(drought, treat, Trt, trait_cat)%>%
+  summarize(mcov=mean(cov),
+            sd=sd(cov),
+            n=length(cov))%>%
+  mutate(se=sd/sqrt(n)) %>% 
+  mutate(label=ifelse(Trt=="N"&treat=="Drought years"&trait_cat=="C3 Gram."&drought=='n','*', ifelse(Trt=='P'&treat=='Drought years'&trait_cat=='C3 Gram.'&drought=='n', '*', ifelse(Trt=='Control'&treat=='Drought years'&trait_cat=='C4 Grass'&drought=='n', '*', ifelse(Trt=='N'&treat=='Drought years'&trait_cat=='C4 Grass'&drought=='n', '*', ifelse(Trt=='P'&treat=='Drought years'&trait_cat=='C4 Grass'&drought=='n', '*', ifelse(Trt=='P&N'&treat=='Drought years'&trait_cat=='Non-N-Fixing Forb'&drought=='n', '*', "")))))))
+
+
+ggplot(data=lfave, aes(x=Trt, y=mcov, fill=drought, label=label))+
+  geom_bar(stat="identity", position=position_dodge())+
+  scale_fill_manual(name="Droughted", values=c("Blue", "Orange"), labels=c("No", "Yes"))+
+  geom_errorbar(aes(ymin=mcov-se, ymax=mcov+se), position=position_dodge(0.9), width=.2)+
+  ylab('Total Cover')+
+  xlab("Nutrient Treatment")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  scale_x_discrete(limits=c("Control", "P", "N", "P&N"), labels=c("Control", "P", "N", "N+P"))+
+  facet_grid(trait_cat~treat)+
+  geom_text(aes(y=(mcov+se)+5))
 
 # ##making figure through time of life forms
 # meanlf<-lf%>%
@@ -459,8 +500,7 @@ lfoverall<-lf%>%
 
 trtlab<-c("Control"="Control", 'P'="P", 'N'='N', 'P&N'="N+P")
 
-rac_func<-
-  ggplot(lfoverall, aes(x=rank, y=mean))+
+rac_func<-ggplot(lfoverall, aes(x=rank, y=mean))+
   geom_line()+
   geom_point(size=5, aes(color=trait_cat))+
   scale_color_manual(name="Functional Type", values=c("darkgreen", "chartreuse3", "green", "darkblue", "lightblue", "deepskyblue"), breaks = c("C4 Grass", "C3 Gram.",  "Annual Grass","Non-N-Fixing Forb", "N-Fixing Forb", "Annual Forb"))+
