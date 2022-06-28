@@ -277,7 +277,7 @@ dp2<-merge(dp, treats, by=c("plot", "row"))%>%
   mutate(nitro=as.factor(nitro),
          phos=as.factor(phos),
          year=as.factor(Year),
-         treatment=ifelse(Year<2013,"Drought years","Recovery years"),
+         treatment=ifelse(Year<2013,"Drought year","Recovery years"),
          sqrt.hgt=sqrt(disc),
          anpp=(1805*sqrt.hgt-2065)/10)
 
@@ -290,14 +290,17 @@ d<-mean(subset(dp2, year==2011&type=="drought")$anpp)
 
 hist(log(dp2$anpp))
 
+##looking for the interaction between nutrient treatment (Trt) and drought treatment (type)
 mdp.t <- lmer(log(anpp)~Trt*type + (1|plotnum), data=subset(dp2, treatment=="Drought years"))
 summary(mdp.t)
 anova(mdp.t, ddf="Kenward-Roger")
+emmeans(mdp.r, pairwise~Trt, adjust="holm")
+
 
 mdp.r <- lmer(anpp~as.factor(year)*Trt*type + (1|plotnum), data=subset(dp2, treatment=="Recovery years"))
 anova(mdp.r, ddf="Kenward-Roger")
-emmeans(mdp.r, pairwise~Trt|type, adjust="holm")
-emmeans(mdp.r, pairwise~Trt, adjust="holm")
+emmeans(mdp.r, pairwise~Trt*type, adjust="holm")
+emmeans(mdp.r, pairwise~type|Trt, adjust="holm")
 
 #means by year and nutrient
 dpave<-dp2%>%
@@ -321,8 +324,8 @@ dpave2<-dp2%>%
   summarize(mbio=mean(anpp),
             sd=sd(anpp),
             n=length(anpp))%>%
-  mutate(se=sd/sqrt(n))%>%
-  mutate(label=ifelse(Trt=="Control"&treat=="Recovery years"&drought=="y", "*", ""))
+  mutate(se=sd/sqrt(n)) %>% 
+  mutate(label=ifelse(Trt=='Control'&treat=='Recovery years'&drought=='n', '*', ''))
 
 #Figure 3
 ggplot(data=dpave2, aes(x=Trt, y=mbio, fill=drought, label=label))+
@@ -333,8 +336,11 @@ ggplot(data=dpave2, aes(x=Trt, y=mbio, fill=drought, label=label))+
   xlab("Nutrient Treatment")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   scale_x_discrete(limits=c("Control", "P", "N", "P&N"), labels=c("Control", "P", "N", "N+P"))+
-  facet_wrap(~treat)+
-  geom_text(aes(y=(mbio+se)+0.05))
+    geom_text(aes(y=(mbio+se)+100))+
+  facet_wrap(~treat)
+
+
+
 
 #appendix through time
 
@@ -393,18 +399,18 @@ dpdiffmeans<-dpdiff%>%
   mutate(se=sd/sqrt(n))%>%
   mutate(trt2=factor(Trt, levels=c("Control", "P", "N", "P&N")))
 
-a<-ggplot(dpdiffmeans, aes(x=trt2, y=mean, fill=Trt))+
-  geom_bar(stat="identity", position = position_dodge(0.9))+
-  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position = position_dodge(0.9), width=0.1)+
-  facet_wrap(~treatment)+
-  scale_fill_manual(name="Treatment", breaks=c("Control", "P", "N", "P&N"),  values=c("black", "blue", "red", "purple"))+
-  scale_x_discrete(labels=c("Control", "P", "N", "N+P"))+
-  theme(panel.grid.major=element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90))+
-  geom_hline(yintercept = 0)+
-  ylab("ANPP differences")+
-  xlab("Nutrient treatment")+
-  theme(legend.position = "none")+
-  ggtitle("A)")
+# a<-ggplot(dpdiffmeans, aes(x=trt2, y=mean, fill=Trt))+
+#   geom_bar(stat="identity", position = position_dodge(0.9))+
+#   geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position = position_dodge(0.9), width=0.1)+
+#   facet_wrap(~treatment)+
+#   scale_fill_manual(name="Treatment", breaks=c("Control", "P", "N", "P&N"),  values=c("black", "blue", "red", "purple"))+
+#   scale_x_discrete(labels=c("Control", "P", "N", "N+P"))+
+#   theme(panel.grid.major=element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90))+
+#   geom_hline(yintercept = 0)+
+#   ylab("ANPP differences")+
+#   xlab("Nutrient treatment")+
+#   theme(legend.position = "none")+
+#   ggtitle("A)")
 
 ##by treatment and time - can put this in an appendix
 dpdiffmeans_time<-dpdiff%>%
@@ -450,18 +456,17 @@ cor<-diff_func%>%
             p=round(cor.test(diff, composition_diff)$p.value,3))%>%
   mutate(adjp=p.adjust(p, method = "BH"))
 
-b<-ggplot(data=diff_func, aes(x=composition_diff, y=diff))+
+ggplot(data=subset(diff_func, type=='Func. type'), aes(x=composition_diff, y=diff))+
   geom_point(aes(color=Trt))+
-  geom_smooth(data=subset(diff_func, treatment=="Drought years"), method="lm", color="black", se=F)+
+  geom_smooth(data=subset(diff_func, type=='Func. type'&treatment=="Drought year"), method="lm", color="black", se=F)+
   scale_color_manual(name="Nutrient treatment", breaks=c("Control", "P", "N", "P&N"), label=c("Control", "P", "N", "N+P"), values=c("black", "blue", "red", "purple"))+
-  facet_grid(type2~treatment)+
+  facet_grid(~treatment, scales='free')+
   geom_hline(yintercept=0)+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "top")+
-  xlab("Compositional difference")+
-  ylab("ANPP difference")+
-  ggtitle("B)")
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  xlab("Functional compositional difference")+
+  ylab(expression(paste("ANPP difference (g ","m"^"-2",")")))
 
-grid.arrange(a, b, heights=c(1.5,2))
+grid.arrange(fig3, b)
 #tried doing this with the diff in production and the cover of LF in the treated plots. No longer want to do it this way. 
 
 # diff<-dpdiff%>%
