@@ -9,6 +9,7 @@ theme_set(theme_bw(12))
 
 #set wd
 my.wd<-setwd("C:/Users/mavolio2/Dropbox/Konza Research")
+my.wd<-setwd("E:/Dropbox/Konza Research")
 
 #read in data
 treats<-read.csv(paste(my.wd, "/p-cubed/Analyses/July 2015 Analyses/PPlot_PlotList.csv", sep=""))
@@ -54,7 +55,7 @@ NMDS<-
 ggplot(data=scores, aes(x=MDS1, y=MDS2, color=Trt, label=label))+
   geom_point(size=3)+
   geom_path()+
-  geom_text_repel(show.legend = F)+
+  geom_text(show.legend = F)+
   scale_color_manual(name="Nutrient treatment", values = c("black", "blue", "red", "purple"), breaks=c("Control", "P", "N", "P&N"), labels=c("Control", "P", "N", "N+P"))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   ylab("NMDS2")+
