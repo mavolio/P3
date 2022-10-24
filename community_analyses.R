@@ -12,6 +12,7 @@ theme_set(theme_bw(12))
 
 #set wd
 my.wd<-setwd("C:/Users/mavolio2/Dropbox/Konza Research")
+my.wd<-setwd("E:/Dropbox/Konza Research")
 
 #read in data
 p3plotcomp<-read.csv(paste(my.wd, "/p-cubed/SpComp/pcubed_sp_data2010-2015.csv", sep = ""))%>%
