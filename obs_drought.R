@@ -75,16 +75,17 @@ speivalues<-as.data.frame(knzspei$fitted)%>%
   bind_cols(knz)%>%
   mutate(day=paste(year, month, "01", sep="-"),
          date=as.Date(day))%>%
-  filter(year>2005)%>%
-  mutate(color=ifelse(PET_tho>-1, 1, 0))
+  filter(year>2001)%>%
+  rename(col1="knzspei$fitted") %>% 
+  mutate(color=ifelse(col1>-1, 1, 0))
  
 
-ggplot(data=speivalues, aes(x=date, y=PET_tho, color=as.factor(color)))+
+ggplot(data=speivalues, aes(x=date, y=col1, color=as.factor(color)))+
   geom_point(show.legend = F)+
   scale_color_manual(values=c("Red", "Black"))+
   geom_hline(yintercept=-1)+
   scale_x_date(date_breaks = "1 year", date_labels = "%Y")+
-  theme(panel.grid.minor = element_blank())+
+  theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank(),axis.text.x=element_text(angle=90,hjust=1))+
   xlab("Year")+
   ylab("SPEI")
 
