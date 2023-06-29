@@ -291,7 +291,7 @@ d<-mean(subset(dp2, year==2011&type=="drought")$anpp)
 hist(log(dp2$anpp))
 
 ##looking for the interaction between nutrient treatment (Trt) and drought treatment (type)
-mdp.t <- lmer(log(anpp)~Trt*type + (1|plotnum), data=subset(dp2, treatment=="Drought years"))
+mdp.t <- lmer(log(anpp)~Trt*type + (1|plotnum), data=subset(dp2, treatment=="Drought year"))
 summary(mdp.t)
 anova(mdp.t, ddf="Kenward-Roger")
 emmeans(mdp.r, pairwise~Trt, adjust="holm")
