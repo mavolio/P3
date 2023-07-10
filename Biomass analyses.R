@@ -70,12 +70,13 @@ dp2<-merge(dp, treats, by=c("plot", "row"))%>%
 ##correlating DP with ANPP
 cor<-biomass%>%
   left_join(dp2)%>%
-  mutate(Type=ifelse(drought=="control", "Un-droughted", "Droughted"))
+  mutate(Type=ifelse(drought=="control", "Un-droughted", "Droughted")) %>%
+  filter(calendar_year==2011)
 
 test<-cor%>%
   group_by(Type)%>%
   summarize(r=round(cor.test(anpp, canpp)$estimate,3),
-            p=round(cor.test(anpp, canpp)$p.value,3))%>%
+            p=round(cor.test(anpp, canpp)$p.value, 3))%>%
   mutate(rpvalue=paste("r = ", r, ", p = ", p))
 
 ggplot(data=cor, aes(x=canpp, y=anpp))+
@@ -83,7 +84,7 @@ ggplot(data=cor, aes(x=canpp, y=anpp))+
   geom_abline(intercept=0)+
   scale_y_continuous(limits=c(180,830))+
   scale_x_continuous(limits=c(180,830))+
-  ylab("Clipped ANPP (g m-2)")+
+  ylab(expression(paste("Clipped ANPP (g ","m"^"-2",")")))+
   xlab("Disc Pasture, Standing biomass (g)")+
   facet_wrap(~Type)+
   geom_text(data=test, mapping=aes(x=800, y = 250, label = rpvalue), hjust=1.05, vjust=1.5)
@@ -117,6 +118,10 @@ anova(m.rec_dp, ddf="Kenward-Roger")
 
 emmeans(m.rec_dp, pairwise~drought|Trt, adjust="holm")
 
+dpave<-dp2 %>% 
+  group_by(drought, treat) %>% 
+  summarize(manpp=mean(canpp))
+
 
 #Figure of standing biomass
 dpave2<-dp2%>%
@@ -133,7 +138,7 @@ ggplot(data=dpave2, aes(x=Trt, y=mbio, fill=drought2, label=label))+
   geom_bar(stat="identity", position=position_dodge())+
   scale_fill_manual(name="Droughted", values=c("Blue", "Orange"), labels=c("No", "Yes"))+
   geom_errorbar(aes(ymin=mbio-se, ymax=mbio+se), position=position_dodge(0.9), width=.2)+
-  ylab(expression(paste("ANPP (g ","m"^"-2",")")))+
+  ylab("Standing biomass (g)")+
   xlab("Nutrient Treatment")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   scale_x_discrete(limits=c("Control", "P", "N", "P&N"), labels=c("Control", "P", "N", "N+P"))+
