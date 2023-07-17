@@ -160,7 +160,9 @@ dist<-ggplot(data=multdiff_means2, aes(x=Trt, y=mean, label=label))+
   ylab("Distance between\nCtrl-Drt Centroids")+
   xlab("Nutirient Treatment")+
   facet_wrap(~treat)+
-  geom_text(aes(y=mean+se+0.05))
+  geom_text(aes(y=mean+se+0.05))+
+  ggtitle("B)")+
+  theme(plot.title = element_text(hjust=-0.1, vjust = -8))
 
 ###doing NMDS. taking the average cover of plot over all three years during drought and control
 ave<-comp%>%
@@ -243,7 +245,9 @@ nmds<-ggplot(data=recoveryscores, aes(x=NMDS1, y=NMDS2, color=Droughted, shape=T
   scale_x_continuous(limits=c(-0.7, 0.8))+
   scale_y_continuous(limits = c(-0.7, 0.8))+
   facet_wrap(~treat)+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  ggtitle("A)")+
+  theme(plot.title = element_text(hjust=-0.1, vjust = -8))
   
 grid.arrange(nmds, dist, ncol=1)
 
@@ -255,21 +259,25 @@ totcov<-comp%>%
   summarize(tot=sum(abundance))
 
 lf<-p3plotcomp%>%
+  filter(spnum<990) %>% #omits unknowns
 mutate(trait_cat=ifelse(form=="F"&life=="A", "Annual Forb",
-                        ifelse(form=="G"&life=="A", "Annual Grass",
-                               ifelse(form=="G"&C3_C4=="C3", "C3 Gram.",
-                                      ifelse(form=="G"&C3_C4=="C4", "C4 Grass",
-                                             ifelse(form=='F'|form=="S"&n_fixer=="N", "Non-N-Fixing Forb",
-                                                    ifelse(form=='F'|form=="S"&n_fixer=="Y", "N-Fixing Forb","UNK")))))))%>%
+                 ifelse(form=="G"&life=="A", "Annual Grass",
+                 ifelse(form=="G"&C3_C4=="C3", "C3 Gram.",
+                 ifelse(form=="G"&C3_C4=="C4", "C4 Grass",
+                 ifelse(form=='F'|form=="S"&n_fixer=="N", "Non-N-Fixing Forb",
+                 ifelse(form=='F'|form=="S"&n_fixer=="Y", "N-Fixing Forb","UNK")))))))%>%
   left_join(treats)%>%
   group_by(plotnum, Trt, precip, calendar_year, trait_cat)%>%
   summarise(cov=sum(abundance))%>%
-  left_join(totcov)%>%
-  mutate(relcov=cov/tot)%>%
+  #left_join(totcov)%>%
+  #mutate(relcov=cov/tot)%>%
   mutate(unid=paste(plotnum, precip, sep="_"), 
          unidt=paste(Trt, precip, sep="_"),
-         unid3=paste(plotnum, Trt, precip, sep="_"))%>%
-  na.omit 
+         unid3=paste(plotnum, Trt, precip, sep="_"))
+
+check<-lf %>% 
+  group_by(Trt, precip, trait_cat) %>% 
+  summarize(mean=mean(cov))
 
 lf_stat<-lf%>% 
   mutate(treat=ifelse(calendar_year<2013, "Drought years", "Recovery years")) %>% 
@@ -301,7 +309,7 @@ lfave<-lf_stat%>%
   mutate(label=ifelse(Trt=="N"&treat=="Drought years"&trait_cat=="C3 Gram."&drought=='n','*', ifelse(Trt=='P'&treat=='Drought years'&trait_cat=='C3 Gram.'&drought=='n', '*', ifelse(Trt=='Control'&treat=='Drought years'&trait_cat=='C4 Grass'&drought=='n', '*', ifelse(Trt=='N'&treat=='Drought years'&trait_cat=='C4 Grass'&drought=='n', '*', ifelse(Trt=='P'&treat=='Drought years'&trait_cat=='C4 Grass'&drought=='n', '*', ifelse(Trt=='P&N'&treat=='Drought years'&trait_cat=='Non-N-Fixing Forb'&drought=='n', '*', "")))))))
 
 
-b<-ggplot(data=subset(lfave, treat=="Drought years"), aes(x=Trt, y=mcov, fill=drought, label=label))+
+a<-ggplot(data=subset(lfave, treat=="Drought years"), aes(x=Trt, y=mcov, fill=drought, label=label))+
   geom_bar(stat="identity", position=position_dodge())+
   scale_fill_manual(name="Droughted", values=c("Blue", "Orange"), labels=c("No", "Yes"))+
   geom_errorbar(aes(ymin=mcov-se, ymax=mcov+se), position=position_dodge(0.9), width=.2)+
@@ -310,9 +318,10 @@ b<-ggplot(data=subset(lfave, treat=="Drought years"), aes(x=Trt, y=mcov, fill=dr
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   scale_x_discrete(limits=c("Control", "P", "N", "P&N"), labels=c("Control", "P", "N", "N+P"))+
   facet_wrap(~trait_cat, nrow=2)+
-  geom_text(aes(y=(mcov+se)+5))
+  geom_text(aes(y=(mcov+se)+5))+
+  ggtitle("A) Drought years")
 
-grid.arrange(a,b, ncol=1)
+
 
 ####doing averages by drought only
 lfave_drt<-lf_stat%>%
@@ -328,17 +337,17 @@ lfave_drt<-lf_stat%>%
        ifelse(trait_cat=='C4 Grass'&treat=='Recovery years'&drought=='n', '*', 
               ifelse(trait_cat=="Non-N-Fixing Forb"&treat=='Drought years'&drought=='n', '*', ""))))))
 
-a<-ggplot(data=lfave_drt, aes(x=trait_cat, y=mcov, fill=drought, label=label))+
+b<-ggplot(data=filter(lfave_drt, treat=="Recovery years"), aes(x=trait_cat, y=mcov, fill=drought, label=label))+
   geom_bar(stat="identity", position=position_dodge())+
   scale_fill_manual(name="Droughted", values=c("Blue", "Orange"), labels=c("No", "Yes"))+
   geom_errorbar(aes(ymin=mcov-se, ymax=mcov+se), position=position_dodge(0.9), width=.2)+
   ylab('Total Cover')+
   xlab("Plant Functional Type")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text.x=element_text(angle=90))+
-  facet_grid(~treat)+
-  geom_text(aes(y=(mcov+se)+5))
+  geom_text(aes(y=(mcov+se)+5))+
+  ggtitle("B) Recovery years")
 
-
+grid.arrange(a,b, ncol=1)
 
 # ##making figure through time of life forms
 # meanlf<-lf%>%
