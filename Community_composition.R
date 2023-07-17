@@ -17,16 +17,16 @@ treats<-read.csv(paste(my.wd, "/p-cubed/Analyses/July 2015 Analyses/PPlot_PlotLi
 pplotcomp<-read.csv(paste(my.wd, "/p-cubed/SpComp/pcubed_sp_data2010-2015.csv", sep = ""))%>%
   filter(precip=="control")%>%
   left_join(treats)
-
-cattraits<-read.csv(paste(my.wd, "/pplots/traits_2021.csv", sep=""))%>%
-  filter(Genus!="")%>%
-  select(Genus, Species, Annual.Peren.Bi, Forb.grass.shrub, C3.C4, N.fixer..Y.N...)%>%
-  mutate(genus_species=paste(tolower(Genus), Species, sep="_"))%>%
-  rename(lifespan=Annual.Peren.Bi,
-         growthform=Forb.grass.shrub,
-         photopath=C3.C4,
-         Nfix=N.fixer..Y.N...)%>%
-  select(-Genus, -Species)
+# 
+# cattraits<-read.csv(paste(my.wd, "/pplots/traits_2021.csv", sep=""))%>%
+#   filter(Genus!="")%>%
+#   select(Genus, Species, Annual.Peren.Bi, Forb.grass.shrub, C3.C4, N.fixer..Y.N...)%>%
+#   mutate(genus_species=paste(tolower(Genus), Species, sep="_"))%>%
+#   rename(lifespan=Annual.Peren.Bi,
+#          growthform=Forb.grass.shrub,
+#          photopath=C3.C4,
+#          Nfix=N.fixer..Y.N...)%>%
+#   select(-Genus, -Species)
 
 #get average cover of each species in a treatment for each year of the experiment (average over the plots)
 ave<-pplotcomp%>%
@@ -60,7 +60,9 @@ ggplot(data=scores, aes(x=MDS1, y=MDS2, color=Trt, label=label))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   ylab("NMDS2")+
   xlab("NMDS1")+
-  annotate("text", x = 0.5, y = -.5, label="Stress = 0.14")
+  annotate("text", x = 0.7, y = -.5, label="Stress = 0.14")+
+ggtitle("A) Community Composition")
+
 
 #permanova
 adonis(compwide[3:73]~compwide$Trt)
@@ -70,39 +72,41 @@ dist<-vegdist(compwide[3:73])
 betadisp<-betadisper(dist,compwide$Trt,type="centroid")
 permutest(betadisp)
 
+#Doing PFTs
 #get average cover of each species in each treatment over all years (average over plots and years). 
-#join categorical triats and create trait categories
-racave<-ave%>%
-  group_by(Trt, genus_species)%>%
-  summarize(mabund=mean(mabund))%>%
-  mutate(rank=rank(-mabund, ties.method = "first"))%>%
-  left_join(cattraits)%>%
-  mutate(trait_cat=ifelse(growthform=="F"&lifespan=="A", "Annual Forb",
-                   ifelse(growthform=="G"&lifespan=="A", "Annual Grass",
-                   ifelse(growthform=="G"&photopath=="C3", "C3 Gram.",
-                   ifelse(growthform=="G"&photopath=="C4", "C4 Grass",
-                   ifelse(growthform=='F'|growthform=="S"&Nfix=="N", "Non-N-Fixing Forb",
-                   ifelse(growthform=='F'|growthform=="S"&Nfix=="Y", "N-Fixing Forb","UNK")))))))%>%
-  separate(genus_species, into=c("genus", "species"), sep="_")%>%
-  mutate(genera=toupper(substr(genus, 1, 1)),
-         sp=paste(genera, species, sep=". "))%>%
-  mutate(name=ifelse(rank<6, sp, ""))%>%
-  mutate(trt2=factor(Trt, levels=c("Control", "P", "N", "P&N")))
+
+PFTcover<-pplotcomp%>%
+  filter(spnum<900) %>% 
+  mutate(trait_cat=ifelse(form=="F"&life=="A", "Annual Forb",
+                   ifelse(form=="G"&life=="A", "Annual Grass",
+                   ifelse(form=="G"&C3_C4=="C3", "C3 Gram.",
+                   ifelse(form=="G"&C3_C4=="C4", "C4 Grass",
+                   ifelse(form=='F'|form=="S"&n_fixer=="N", "Non-N-Fixing Forb",
+                   ifelse(form=='F'|form=="S"&n_fixer=="Y", "N-Fixing Forb","UNK")))))))%>%
+  left_join(treats)%>%
+  group_by(plotnum, Trt, precip, year, trait_cat)%>%
+  summarise(cov=sum(cover))
+
+racave<-PFTcover%>%
+  group_by(Trt, trait_cat) %>% 
+  summarize(meancover=mean(cov)) %>% 
+  mutate(rank=rank(-meancover, ties.method = "first")) %>% 
+  mutate(trt2=factor(Trt, levels=c("Control", "P", "N", "P&N"))) 
 
 #make new labels for facet_wrap step  
 collabel<-c("Control"="Control", "P"="P","N"="N","P&N"="N+P")
 
 #great rac figure
 rac<-
-ggplot(data=racave, aes(x=rank, y=mabund, label=name))+
+ggplot(data=racave, aes(x=rank, y=meancover))+
   geom_line()+
-  geom_point(aes(color=trait_cat), size=2)+
-  scale_color_manual(name="Functional type", values=c("darkgreen", "chartreuse3", "green", "darkblue", "lightblue", "deepskyblue"), breaks = c("C4 Gram.", "C3 Gram.",  "Annual Gram.","Non-N-Fixing Forb", "N-Fixing Forb", "Annual Forb"))+
-  geom_text_repel(max.overlaps = 10, size=3)+
+  geom_point(aes(color=trait_cat), size=4)+
+  scale_color_manual(name="Functional type", values=c("darkgreen", "chartreuse3", "darkolivegreen1", "darkblue", "lightblue", "deepskyblue"), breaks = c("C4 Grass", "C3 Gram.",  "Annual Grass","Non-N-Fixing Forb", "N-Fixing Forb", "Annual Forb"))+
   facet_wrap(~trt2, labeller = labeller(trt2=collabel))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  ylab("Abundance")+
-  xlab("Rank")
+  ylab("Total Cover")+
+  xlab("Rank")+
+  ggtitle("B) Cover of Plant Functional Types")
 
 #bind both figures together.
 grid.arrange(NMDS, rac)
@@ -115,18 +119,18 @@ grid.arrange(NMDS, rac_func)
 
 #plot changes over time ESA talk
 
-allpp<-read.csv(paste(my.wd, "/pplots/Sppcomp/Species Comp_to Use/Compiling Datasets in R/Spp_Data_2002_2019.csv", sep = ""))%>%
-  filter(treatment=="N1P0"|treatment=="N2P0"|treatment=="N1P3"|treatment=="N2P3")
-
-cattraits<-read.csv(paste(my.wd, "/pplots/traits_2021.csv", sep=""))%>%
-  filter(Genus!="")%>%
-  select(Genus, Species, Annual.Peren.Bi, Forb.grass.shrub, C3.C4, N.fixer..Y.N...)%>%
-  mutate(genus_species=paste(tolower(Genus), Species, sep="_"))%>%
-  rename(lifespan=Annual.Peren.Bi,
-         growthform=Forb.grass.shrub,
-         photopath=C3.C4,
-         Nfix=N.fixer..Y.N...)%>%
-  select(-Genus, -Species)
+# allpp<-read.csv(paste(my.wd, "/pplots/Sppcomp/Species Comp_to Use/Compiling Datasets in R/Spp_Data_2002_2019.csv", sep = ""))%>%
+#   filter(treatment=="N1P0"|treatment=="N2P0"|treatment=="N1P3"|treatment=="N2P3")
+# 
+# cattraits<-read.csv(paste(my.wd, "/pplots/traits_2021.csv", sep=""))%>%
+#   filter(Genus!="")%>%
+#   select(Genus, Species, Annual.Peren.Bi, Forb.grass.shrub, C3.C4, N.fixer..Y.N...)%>%
+#   mutate(genus_species=paste(tolower(Genus), Species, sep="_"))%>%
+#   rename(lifespan=Annual.Peren.Bi,
+#          growthform=Forb.grass.shrub,
+#          photopath=C3.C4,
+#          Nfix=N.fixer..Y.N...)%>%
+#   select(-Genus, -Species)
 
 #get average cover of each species in a treatment for each year of the experiment (average over the plots)
 aveall<-allpp%>%
