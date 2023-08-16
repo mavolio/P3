@@ -35,7 +35,8 @@ richeven<-community_structure(comp, time.var="calendar_year", abundance.var="abu
   separate(unid, into=c("plotnum", "drought"), sep="_")%>%
   mutate(plotnum=as.integer(plotnum))%>%
   left_join(treats)%>%
-  mutate(treat=ifelse(calendar_year<2013, "Drought years", "Recovery years"))
+  mutate(treat=ifelse(calendar_year<2013, "Drought years", "Recovery years")) %>% 
+  mutate(year=as.factor(calendar_year))
 
 hist(richeven$richness)#this is normal
 hist(log(richeven$Evar))#log transfrom even
@@ -48,8 +49,10 @@ rich2010<-richeven%>%
 
 
 ##richness in drought
-rich.d <- lmer(richness~Trt*drought*as.factor(calendar_year) + (1|plotnum), data=subset(richeven, treat=="Drought years"))
+##this is where i left off this model might not be right.
+rich.d <- lmer(richness~Trt*drought*year + (1|year)+(1|plotnum/drought), data=subset(richeven, treat=="Drought years"))
 
+#summary(rich.d)
 anova(rich.d, ddf="Kenward-Roger")
 
 #doing contrasts
