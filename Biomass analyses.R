@@ -4,6 +4,7 @@ library(lmerTest)
 library(nlme)
 library(emmeans)
 library(car)
+
 #test
 
 theme_set(theme_bw(12))
@@ -40,8 +41,11 @@ biomass<-p2%>%
          nitro=as.factor(nitro),
          phos=as.factor(phos))%>%
   select(calendar_year, grass, forb, anpp, Trt, type, treat, plotnum, nitro,phos) %>% 
-  rename(drought=type)
+  rename(drought=type) %>% 
+  mutate(year=as.factor(calendar_year)) %>% 
+  mutate(plot=as.factor(paste("p", plotnum, sep="-")))
 
+write.csv(biomass, "C:/Users/mavolio2/Dropbox/Konza Research/p-cubed/Analyses/July 2015 Analyses/BiomassforSAS.csv", row.names=F)
 
 ##Disc pasture data data
 dp2011<-read.csv("C:/Users/mavolio2/Dropbox/Konza Research/P-cubed/DiscPasture/2011_dispachmeter.csv")%>%
@@ -64,7 +68,9 @@ dp2<-merge(dp, treats, by=c("plot", "row"))%>%
          treatment=ifelse(Year<2013,"Drought years","Recovery years"),
          sqrt.hgt=sqrt(disc),
          anpp=(1805*sqrt.hgt-2065)/10)%>%
-  rename(calendar_year=Year, treat=treatment, canpp=anpp, drought=type)
+  rename(calendar_year=Year, treat=treatment, canpp=anpp, drought=type) %>% 
+  mutate(year=as.factor(calendar_year)) %>% 
+  mutate(plot=as.factor(paste("p", plotnum, sep="-")))
 
 
 ##correlating DP with ANPP
@@ -94,13 +100,16 @@ ggplot(data=cor, aes(x=canpp, y=anpp))+
 #total biomass ANPP
 hist(log(biomass$anpp))
 
-m.drt <- lmer(log(anpp)~Trt*drought*as.factor(calendar_year) + (1|plotnum), data=subset(biomass, treat=="Drought years"))
+m.drt<- lmer(log(anpp)~Trt*drought*year + (1|plot) + (1|plot:drought)+(1|plot:year), data=subset(biomass, treat=="Drought years"))
+summary(m.drt)
 anova(m.drt, ddf="Kenward-Roger")
 emmeans(m.drt, pairwise~drought, adjust="holm")
 
-m.rec <- lmer(log(anpp)~Trt*drought*as.factor(calendar_year) + (1|plotnum), data=subset(biomass, treat=="Recovery years"))
+
+m.rec <- lmer(log(anpp)~Trt*drought*year + (1|plot)+ (1|plot:drought)+(1|plot:year), data=subset(biomass, treat=="Recovery years"))
 anova(m.rec, ddf="Kenward-Roger")
-emmeans(m.rec, pairwise~drought, adjust="holm")
+
+emmeans(m.rec, pairwise~drought|Trt, adjust="holm")
 
 biomassave<-biomass %>% 
   group_by(drought, treat) %>% 
@@ -109,14 +118,14 @@ biomassave<-biomass %>%
 #disc pasture as measure of standing biomass
 hist(log(dp2a$canpp))
 #one way anova in drought year
-m.drt_dp <- lmer(log(canpp)~Trt*drought + (1|plotnum), data=subset(dp2, treat=="Drought years"))
+m.drt_dp <- lmer(log(canpp)~Trt*drought + (1|plot), data=subset(dp2, treat=="Drought years"))
 anova(m.drt_dp, ddf="Kenward-Roger")
 emmeans(m.drt_dp, pairwise~drought|Trt, adjust="holm")
 
-m.rec_dp <- lmer(log(canpp)~as.factor(calendar_year)*Trt*drought + (1|plotnum), data=subset(dp2, treat=="Recovery years"))
+m.rec_dp <- lmer(log(canpp)~Trt*drought*year + (1|plot)+(1|plot:drought) + (1|plot:year), data=subset(dp2, treat=="Recovery years"))
 anova(m.rec_dp, ddf="Kenward-Roger")
 
-emmeans(m.rec_dp, pairwise~drought|Trt, adjust="holm")
+emmeans(m.rec_dp, pairwise~Trt, adjust="holm")
 
 dpave<-dp2 %>% 
   group_by(drought, treat) %>% 
@@ -144,6 +153,24 @@ ggplot(data=dpave2, aes(x=Trt, y=mbio, fill=drought2, label=label))+
   scale_x_discrete(limits=c("Control", "P", "N", "P&N"), labels=c("Control", "P", "N", "N+P"))+
   geom_text(aes(y=(mbio)+100))+
   facet_wrap(~treat)
+
+#Figure of biomass
+biomassave<-biomass%>%
+  mutate(drought2=ifelse(drought=="control", "n", "y"))%>%
+  group_by(drought2, treat, Trt)%>%
+  summarize(mbio=mean(anpp),
+            sd=sd(anpp),
+            n=length(anpp))%>%
+  mutate(se=sd/sqrt(n)) 
+
+ggplot(data=subset(biomassave, treat=="Recovery years"), aes(x=Trt, y=mbio, fill=drought2))+
+  geom_bar(stat="identity", position=position_dodge())+
+  scale_fill_manual(name="Droughted", values=c("Blue", "Orange"), labels=c("No", "Yes"))+
+  geom_errorbar(aes(ymin=mbio-se, ymax=mbio+se), position=position_dodge(0.9), width=.2)+
+  ylab(expression(paste("Clipped ANPP (g ","m"^"-2",")")))+
+  xlab("Nutrient Treatment")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  scale_x_discrete(limits=c("Control", "P", "N", "P&N"), labels=c("Control", "P", "N", "N+P"))
 
 ###need to consider whether or not I can do this.
 ###linking biomass to community composition
