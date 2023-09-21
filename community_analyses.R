@@ -36,7 +36,8 @@ richeven<-community_structure(comp, time.var="calendar_year", abundance.var="abu
   mutate(plotnum=as.integer(plotnum))%>%
   left_join(treats)%>%
   mutate(treat=ifelse(calendar_year<2013, "Drought years", "Recovery years")) %>% 
-  mutate(year=as.factor(calendar_year))
+  mutate(year=as.factor(calendar_year)) %>% 
+  mutate(plot=as.factor(paste("p", plotnum, sep="-")))
 
 hist(richeven$richness)#this is normal
 hist(log(richeven$Evar))#log transfrom even
@@ -49,8 +50,8 @@ rich2010<-richeven%>%
 
 
 ##richness in drought
-##this is where i left off this model might not be right.
-rich.d <- lmer(richness~Trt*drought*year + (1|year)+(1|plotnum/drought), data=subset(richeven, treat=="Drought years"))
+##this is where i left off this model might not be correct.
+rich.d <- lmer(richness~Trt*drought*year + (1|plot) + (1|plot:drought)+(1|plot:year), data=subset(richeven, treat=="Drought years"))
 
 #summary(rich.d)
 anova(rich.d, ddf="Kenward-Roger")
@@ -59,7 +60,7 @@ anova(rich.d, ddf="Kenward-Roger")
 emmeans(rich.d, pairwise~drought|Trt, adjust="holm")
 
 #richness during recovery
-rich.r <- lmer(richness~Trt*drought*as.factor(calendar_year) + (1|plotnum), data=subset(richeven, treat=="Recovery years"))
+rich.r <- lmer(richness~Trt*drought*year + (1|plot) + (1|plot:drought)+(1|plot:year), data=subset(richeven, treat=="Recovery years"))
 
 anova(rich.r, ddf="Kenward-Roger")
 
@@ -67,13 +68,13 @@ anova(rich.r, ddf="Kenward-Roger")
 emmeans(rich.r, pairwise~Trt, adjust="holm")
 
 ##evenness in drought
-even.d <- lmer(log(Evar)~Trt*drought*as.factor(calendar_year) + (1|plotnum), data=subset(richeven, treat=="Drought years"))
+even.d <- lmer(log(Evar)~Trt*drought*year + (1|plot) + (1|plot:drought)+(1|plot:year), data=subset(richeven, treat=="Drought years"))
 anova(even.d, ddf="Kenward-Roger")
 #doing contrasts
 emmeans(even.d, pairwise~Trt, adjust="holm")
 
 #evenness during recovery
-even.r <- lmer(log(Evar)~Trt*drought*as.factor(calendar_year) + (1|plotnum), data=subset(richeven, treat=="Recovery years"))
+even.r <- lmer(log(Evar)~Trt*drought*year +(1|plot) + (1|plot:drought)+(1|plot:year), data=subset(richeven, treat=="Recovery years"))
 anova(even.r, ddf="Kenward-Roger")
 
 richtoplot<-richeven%>%
@@ -137,15 +138,18 @@ multdiff<-multivariate_difference(comp2, time.var="calendar_year", species.var="
   separate(unid32, into=c("plotnum2", "Trt2", "drought2"), sep="_")%>%
   filter(plotnum==plotnum2)%>%
   select(-Trt2, -plotnum2)%>%
-  mutate(treat=ifelse(calendar_year<2013, "Drought years", "Recovery years"))
+  mutate(treat=ifelse(calendar_year<2013, "Drought years", "Recovery years"))%>% 
+  mutate(year=as.factor(calendar_year)) %>% 
+  mutate(plot=as.factor(paste("p", plotnum, sep="-")))
+
 
 ##
 
-mult.d <- lmer(composition_diff~Trt*as.factor(calendar_year) + (1|plotnum), data=subset(multdiff, treat=="Drought years"))
+mult.d <- lmer(composition_diff~Trt*year + (1|plot), data=subset(multdiff, treat=="Drought years"))
 anova(mult.d, ddf="Kenward-Roger")
 
 
-mult.r <- lmer(composition_diff~Trt*as.factor(calendar_year) + (1|plotnum), data=subset(multdiff, treat=="Recovery years"))
+mult.r <- lmer(composition_diff~Trt*year + (1|plot), data=subset(multdiff, treat=="Recovery years"))
 anova(mult.r, ddf="Kenward-Roger")
 emmeans(mult.r, pairwise~Trt, adjust="holm")
 
@@ -286,17 +290,19 @@ lf_stat<-lf%>%
   mutate(treat=ifelse(calendar_year<2013, "Drought years", "Recovery years")) %>% 
   select(plotnum, Trt, precip, calendar_year, treat, trait_cat, cov) %>% 
   pivot_wider(names_from="trait_cat", values_from="cov", values_fill=0) %>% 
-  pivot_longer("Annual Forb":"Annual Grass", names_to="trait_cat", values_to = "cov")
+  pivot_longer("Annual Forb":"Annual Grass", names_to="trait_cat", values_to = "cov") %>% 
+  mutate(year=as.factor(calendar_year)) %>% 
+  mutate(plot=as.factor(paste("p", plotnum, sep="-")))
 
 
 ###looking at cover differences of lf through time
-lfcov.d <- lmer(cov~Trt*precip*trait_cat*as.factor(calendar_year) + (1|plotnum), data=subset(lf_stat, treat=="Drought years"))
+lfcov.d <- lmer(cov~Trt*precip*trait_cat*year + (1|plot) + (1|plot:precip) + (1|plot:year), data=subset(lf_stat, treat=="Drought years"))
 anova(lfcov.d, ddf="Kenward-Roger")
 #doing contrasts
 emmeans(lfcov.d, pairwise~precip|Trt|trait_cat, adjust="holm")
 emmeans(lfcov.d, pairwise~precip|trait_cat, adjust="holm")
 
-lfcov.r <- lmer(cov~Trt*precip*trait_cat*as.factor(calendar_year) + (1|plotnum), data=subset(lf_stat, treat=="Recovery years"))
+lfcov.r <- lmer(cov~Trt*precip*trait_cat*year + (1|plot) + (1|plot:precip) + (1|plot:year), data=subset(lf_stat, treat=="Recovery years"))
 anova(lfcov.r, ddf="Kenward-Roger")
 emmeans(lfcov.r, pairwise~precip|Trt|trait_cat, adjust="holm")
 emmeans(lfcov.r, pairwise~precip|trait_cat, adjust="holm")
