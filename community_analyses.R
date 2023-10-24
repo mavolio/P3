@@ -296,8 +296,16 @@ lf_stat<-lf%>%
 
 
 ###looking at cover differences of lf through time
-lfcov.d <- lmer(cov~Trt*precip*trait_cat*year + (1|plot) + (1|plot:precip) + (1|plot:year), data=subset(lf_stat, treat=="Drought years"))
+lfcov.d <- lmer(cov~Trt*precip*trait_cat*year + (1|plot:precip:year) + (1|plot:precip) + (1|plot:year)+ (1|plot:trait_cat) + (1|plot:year:trait_cat) + (trait_cat), data=subset(lf_stat, treat=="Drought years"))
 anova(lfcov.d, ddf="Kenward-Roger")
+
+(1 | plot / drought / year) +
+  (1 | plot:year) +
+  (1 | plot:drought:PFT) +
+  (1 | plot:PFT) +
+  (1 | plot:year:PFT),
+
+
 #doing contrasts
 emmeans(lfcov.d, pairwise~precip|Trt|trait_cat, adjust="holm")
 emmeans(lfcov.d, pairwise~precip|trait_cat, adjust="holm")
