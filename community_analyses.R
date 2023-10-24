@@ -8,12 +8,14 @@ library(lmerTest)
 library(emmeans)
 library(car)
 library(gridExtra)
+library(ggpubr)
 
 theme_set(theme_bw(12))
 
 #set wd
 my.wd<-setwd("C:/Users/mavolio2/Dropbox/Konza Research")
 my.wd<-setwd("E:/Dropbox/Konza Research")
+
 
 #read in data
 p3plotcomp<-read.csv(paste(my.wd, "/p-cubed/SpComp/pcubed_sp_data2010-2015.csv", sep = ""))%>%
@@ -149,7 +151,7 @@ mult.d <- lmer(composition_diff~Trt*year + (1|plot), data=subset(multdiff, treat
 anova(mult.d, ddf="Kenward-Roger")
 
 
-mult.r <- lmer(composition_diff~Trt*year + (1|plot), data=subset(multdiff, treat=="Recovery years"))
+mult.r <- lmer(composition_diff~Trt*year + (1|plot)+ (1|plot:drought)+(1|plot:year), data=subset(multdiff, treat=="Recovery years"))
 anova(mult.r, ddf="Kenward-Roger")
 emmeans(mult.r, pairwise~Trt, adjust="holm")
 
@@ -296,75 +298,70 @@ lf_stat<-lf%>%
 
 
 ###looking at cover differences of lf through time
-lfcov.d <- lmer(cov~Trt*precip*trait_cat*year + (1|plot:precip:year) + (1|plot:precip) + (1|plot:year)+ (1|plot:trait_cat) + (1|plot:year:trait_cat) + (trait_cat), data=subset(lf_stat, treat=="Drought years"))
+lfcov.d <- lmer(cov~Trt*precip*trait_cat*year + (1|plot/precip/year) + (1|plot:year)+ (1|plot:precip:trait_cat) + (1|plot:trait_cat) + (1|plot:year:trait_cat), data=subset(lf_stat, treat=="Drought years"))
 anova(lfcov.d, ddf="Kenward-Roger")
 
-(1 | plot / drought / year) +
-  (1 | plot:year) +
-  (1 | plot:drought:PFT) +
-  (1 | plot:PFT) +
-  (1 | plot:year:PFT),
-
-
 #doing contrasts
-emmeans(lfcov.d, pairwise~precip|Trt|trait_cat, adjust="holm")
-emmeans(lfcov.d, pairwise~precip|trait_cat, adjust="holm")
+emmeans(lfcov.d, pairwise~precip|Trt|trait_cat|year, adjust="holm")
 
-lfcov.r <- lmer(cov~Trt*precip*trait_cat*year + (1|plot) + (1|plot:precip) + (1|plot:year), data=subset(lf_stat, treat=="Recovery years"))
+
+lfcov.r <- lmer(cov~Trt*precip*trait_cat*year +  (1|plot/precip/year) + (1|plot:year)+ (1|plot:precip:trait_cat) + (1|plot:trait_cat) + (1|plot:year:trait_cat), data=subset(lf_stat, treat=="Recovery years"))
 anova(lfcov.r, ddf="Kenward-Roger")
-emmeans(lfcov.r, pairwise~precip|Trt|trait_cat, adjust="holm")
-emmeans(lfcov.r, pairwise~precip|trait_cat, adjust="holm")
+emmeans(lfcov.r, pairwise~precip|Trt|trait_cat|year, adjust="holm")
+
 
 lfave<-lf_stat%>%
-  mutate(calendar_year=as.integer(as.character(calendar_year)))%>%
+  mutate(year=as.integer(as.character(year)))%>%
   mutate(drought=ifelse(precip=="control", "n", "y"))%>%
-  group_by(drought, treat, Trt, trait_cat)%>%
+  group_by(drought, treat, Trt, year, trait_cat)%>%
   summarize(mcov=mean(cov),
             sd=sd(cov),
             n=length(cov))%>%
   mutate(se=sd/sqrt(n)) %>% 
-  mutate(label=ifelse(Trt=="N"&treat=="Drought years"&trait_cat=="C3 Gram."&drought=='n','*', ifelse(Trt=='P'&treat=='Drought years'&trait_cat=='C3 Gram.'&drought=='n', '*', ifelse(Trt=='Control'&treat=='Drought years'&trait_cat=='C4 Grass'&drought=='n', '*', ifelse(Trt=='N'&treat=='Drought years'&trait_cat=='C4 Grass'&drought=='n', '*', ifelse(Trt=='P'&treat=='Drought years'&trait_cat=='C4 Grass'&drought=='n', '*', ifelse(Trt=='P&N'&treat=='Drought years'&trait_cat=='Non-N-Fixing Forb'&drought=='n', '*', "")))))))
+  mutate(trt2=factor(Trt, levels=c("Control", "P", "N", "P&N"), labels=c("Control", "P", "N", "N+P")))
 
+# a<-ggplot(data=subset(lfave, treat=="Drought years"), aes(x=as.factor(year), y=mcov, color=drought, group=drought))+
+#   geom_point()+
+#   geom_line()+
+#   scale_color_manual(name="Droughted", values=c("Blue", "Orange"), labels=c("No", "Yes"))+
+#   geom_errorbar(aes(ymin=mcov-se, ymax=mcov+se), width=.2)+
+#   ylab('Total Cover')+
+#   xlab("Year")+
+#   scale_x_discrete(labels=c("'10", "'11", "'12"))+
+#   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+#   facet_grid(trait_cat~trt2, scales='free')+
+#   ggtitle("A) Drought years")
+# 
+# 
+# b<-ggplot(data=subset(lfave, treat=="Recovery years"), aes(x=as.factor(year), y=mcov, color=drought, group=drought))+
+#   geom_point()+
+#   geom_line()+
+#   scale_color_manual(name="Droughted", values=c("Blue", "Orange"), labels=c("No", "Yes"))+
+#   geom_errorbar(aes(ymin=mcov-se, ymax=mcov+se), width=.2)+
+#   ylab('Total Cover')+
+#   xlab("Year")+
+#   scale_x_discrete(labels=c("'13", "'14", "'15"))+
+#   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+#   facet_grid(trait_cat~trt2, scales='free')+
+#   ggtitle("B) Recovery years")
+# 
+# ggarrange(a, b, ncol=2, common.legend = TRUE, legend="top")
 
-a<-ggplot(data=subset(lfave, treat=="Drought years"), aes(x=Trt, y=mcov, fill=drought, label=label))+
-  geom_bar(stat="identity", position=position_dodge())+
-  scale_fill_manual(name="Droughted", values=c("Blue", "Orange"), labels=c("No", "Yes"))+
-  geom_errorbar(aes(ymin=mcov-se, ymax=mcov+se), position=position_dodge(0.9), width=.2)+
+#figure for the paper
+ggplot(data=subset(lfave), aes(x=as.factor(year), y=mcov, color=drought))+
+  geom_rect(data=NULL,aes(xmin=3.5,xmax=6.56,ymin=-Inf,ymax=Inf),
+            fill="lightgray", color="lightgray")+
+  geom_point()+
+  geom_line(aes(group=drought))+
+  scale_color_manual(name="Droughted", values=c("Blue", "Orange"), labels=c("No", "Yes"))+
+  geom_errorbar(aes(ymin=mcov-se, ymax=mcov+se), width=.2)+
   ylab('Total Cover')+
-  xlab("Nutrient Treatment")+
+  xlab("Year")+
+  scale_x_discrete(labels=c("'10", "'11", "'12","'13", "'14", "'15"))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  scale_x_discrete(limits=c("Control", "P", "N", "P&N"), labels=c("Control", "P", "N", "N+P"))+
-  facet_wrap(~trait_cat, nrow=2)+
-  geom_text(aes(y=(mcov+se)+5))+
-  ggtitle("A) Drought years")
+  geom_vline(xintercept=3.5)+
+  facet_grid(trait_cat~trt2, scales='free')
 
-
-
-####doing averages by drought only
-lfave_drt<-lf_stat%>%
-  mutate(calendar_year=as.integer(as.character(calendar_year)))%>%
-  mutate(drought=ifelse(precip=="control", "n", "y"))%>%
-  group_by(drought, treat, trait_cat)%>%
-  summarize(mcov=mean(cov),
-            sd=sd(cov),
-            n=length(cov))%>%
-  mutate(se=sd/sqrt(n)) %>% 
-  mutate(label=ifelse(trait_cat=="C3 Gram."&treat=="Drought years"&drought=="n", '*', 
-                      ifelse(trait_cat=="C3 Gram."&treat=="Recovery years"&drought=='n', "*", ifelse(trait_cat=='C4 Grass'&treat=='Drought years'&drought=='n', "*", 
-       ifelse(trait_cat=='C4 Grass'&treat=='Recovery years'&drought=='n', '*', 
-              ifelse(trait_cat=="Non-N-Fixing Forb"&treat=='Drought years'&drought=='n', '*', ""))))))
-
-b<-ggplot(data=filter(lfave_drt, treat=="Recovery years"), aes(x=trait_cat, y=mcov, fill=drought, label=label))+
-  geom_bar(stat="identity", position=position_dodge())+
-  scale_fill_manual(name="Droughted", values=c("Blue", "Orange"), labels=c("No", "Yes"))+
-  geom_errorbar(aes(ymin=mcov-se, ymax=mcov+se), position=position_dodge(0.9), width=.2)+
-  ylab('Total Cover')+
-  xlab("Plant Functional Type")+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text.x=element_text(angle=90))+
-  geom_text(aes(y=(mcov+se)+5))+
-  ggtitle("B) Recovery years")
-
-grid.arrange(a,b, ncol=1)
 
 # ##making figure through time of life forms
 # meanlf<-lf%>%
