@@ -8,7 +8,7 @@ library(lmerTest)
 library(emmeans)
 library(car)
 library(gridExtra)
-library(ggpubr)
+
 
 theme_set(theme_bw(12))
 
@@ -204,9 +204,18 @@ d2011<-dwide %>%
 d2012<-dwide %>% 
   filter(calendar_year==2012)
 
-adonis2(d2010[,6:75]~Trt*precip, data=d2010)
-adonis2(d2011[,6:75]~Trt*precip, data=d2011)
-adonis2(d2012[,6:75]~Trt*precip, data=d2012)
+##Doing Permanova
+perm<-how(nperm=199)
+setBlocks(perm)<-with(d2010, plotnum)
+adonis2(d2010[,6:75]~Trt*precip, data=d2010, permutations = perm)
+
+setBlocks(perm)<-with(d2011, plotnum)
+adonis2(d2011[,6:75]~Trt*precip, data=d2011, permutations = perm)
+
+setBlocks(perm)<-with(d2012, plotnum)
+adonis2(d2012[,6:75]~Trt*precip, data=d2012, permutations = perm)
+
+
 #recovery
 recovery<-ave %>% 
   filter(treat=="Recovery years")
@@ -228,9 +237,15 @@ r2014<-rwide %>%
 r2015<-rwide %>% 
   filter(calendar_year==2015)
 
-adonis2(r2013[,6:69]~Trt*precip, data=r2013)
-adonis2(r2014[,6:69]~Trt*precip, data=r2014)
-adonis2(r2015[,6:69]~Trt*precip, data=r2015)
+perm<-how(nperm=199)
+setBlocks(perm)<-with(r2013, plotnum)
+adonis2(r2013[,6:69]~Trt*precip, data=r2013, permutations = perm)
+
+setBlocks(perm)<-with(r2014, plotnum)
+adonis2(r2014[,6:69]~Trt*precip, data=r2014, permutations = perm)
+
+setBlocks(perm)<-with(r2015, plotnum)
+adonis2(r2015[,6:69]~Trt*precip, data=r2015, permutations = perm)
 
 recoveryscores<-rplots%>%
   bind_cols(as.data.frame(rmds$points)) %>% 
