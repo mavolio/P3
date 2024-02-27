@@ -8,32 +8,33 @@ library(gridExtra)
 theme_set(theme_bw(14))
 
 #set wd
-my.wd<-setwd("C:/Users/mavolio2/Dropbox/Konza Research")
-my.wd<-setwd("E:/Dropbox/Konza Research")
+my.wd<-setwd("C:/Users/mavolio2/Dropbox/Konza Research/")
 
 #read in data
-treats<-read.csv(paste(my.wd, "/p-cubed/Analyses/July 2015 Analyses/PPlot_PlotList.csv", sep="")) %>% 
+treats<-read.csv("p-cubed/Analyses/July 2015 Analyses/PPlot_PlotList.csv") %>% 
   rename(plot_id=plotnum)
 
 
-pplotcomp<-read.csv(paste(my.wd, "\\pplots\\Sppcomp\\Species Comp_to Use\\Compiling Datasets in R\\Spp_Data_2002_2021.csv", sep = "")) %>% 
+pplotcomp<-read.csv("pplots\\Sppcomp\\Species Comp_to Use\\Compiling Datasets in R\\Spp_Data_2002_2021.csv") %>% 
   left_join(treats) %>% 
   filter(!is.na(Trt))
 
 
-# cattraits<-read.csv(paste(my.wd, "/pplots/traits_2021.csv", sep=""))%>%
-#   filter(Genus!="")%>%
-#   select(Genus, Species, Annual.Peren.Bi, Forb.grass.shrub, C3.C4, N.fixer..Y.N...)%>%
-#   mutate(genus_species=paste(tolower(Genus), Species, sep="_"))%>%
-#   rename(lifespan=Annual.Peren.Bi,
-#          growthform=Forb.grass.shrub,
-#          photopath=C3.C4,
-#          Nfix=N.fixer..Y.N...)%>%
-#   select(-Genus, -Species)
+cattraits<-read.csv(paste(my.wd, "/pplots/traits_2021.csv", sep=""))%>%
+  filter(Genus!="")%>%
+  rename(spnum=Species.Number) %>% 
+  select(spnum, Genus, Species, Annual.Peren.Bi, Forb.grass.shrub, C3.C4, N.fixer..Y.N...)%>%
+  mutate(genus_species=paste(tolower(Genus), Species, sep="_"))%>%
+  rename(lifespan=Annual.Peren.Bi,
+         growthform=Forb.grass.shrub,
+         photopath=C3.C4,
+         Nfix=N.fixer..Y.N...)%>%
+  select(-Genus, -Species)
 
 #get average cover of each species in a treatment for each year of the experiment (average over the plots)
 ave<-pplotcomp%>%
-  group_by(calendar_year, Trt, spnum)%>%
+  filter(calendar_year<2016) %>% 
+  group_by(calendar_year, Trt, spnum, genus_species)%>%
   summarize(mabund=mean(abundance))
 
 #make the dataset wide for vegan
@@ -51,19 +52,20 @@ mds
 #the label step adds the label for the first and last year of data
 scores<-plots%>%
   bind_cols(as.data.frame(mds$points))%>%
-  mutate(label=ifelse(calendar_year==2002, as.character(calendar_year),""))
+  mutate(label=ifelse(calendar_year==2002, as.character(calendar_year),""),
+         year=ifelse(calendar_year>2009, "n", 'y'))
 
 #make figure with first and last year labeled and path between points connected
-
-ggplot(data=scores, aes(x=MDS1, y=MDS2, color=Trt, label=label))+
+nmds<-ggplot(data=scores, aes(x=MDS1, y=MDS2, color=Trt, label=label, shape=year, group=Trt))+
   geom_point(size=3)+
   geom_path()+
-  geom_text(show.legend = F)+
+  scale_shape_manual(guide='none', values=c(2, 17))+
+  geom_label_repel(show.legend = F)+
   scale_color_manual(name="Nutrient treatment", values = c("black", "blue", "red", "purple"), breaks=c("Control", "P", "N", "P&N"), labels=c("Control", "P", "N", "N+P"))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   ylab("NMDS2")+
   xlab("NMDS1")+
-  annotate("text", x = 0.5, y = -.5, label="Stress = 0.17")
+  annotate("text", x = 0.5, y = -.5, label="Stress = 0.18")
 
 #permanova
 adonis(compwide[3:73]~compwide$Trt)
@@ -76,7 +78,7 @@ permutest(betadisp)
 #get average cover of each species in each treatment over all years (average over plots and years). 
 #join categorical triats and create trait categories
 racave<-ave%>%
-  group_by(Trt, genus_species)%>%
+  group_by(Trt, spnum)%>%
   summarize(mabund=mean(mabund))%>%
   mutate(rank=rank(-mabund, ties.method = "first"))%>%
   left_join(cattraits)%>%
@@ -108,7 +110,7 @@ ggplot(data=racave, aes(x=rank, y=mabund, label=name))+
   xlab("Rank")
 
 #bind both figures together.
-grid.arrange(NMDS, rac)
+grid.arrange(nmds, rac)
 
 #run RAC func code in community analyses.
 
