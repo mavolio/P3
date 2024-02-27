@@ -70,8 +70,10 @@ dp2<-merge(dp, treats, by=c("plot", "row"))%>%
          anpp=(1805*sqrt.hgt-2065)/10)%>%
   rename(calendar_year=Year, treat=treatment, canpp=anpp, drought=type) %>% 
   mutate(year=as.factor(calendar_year)) %>% 
-  mutate(plot=as.factor(paste("p", plotnum, sep="-")))
+  mutate(plot=as.factor(paste("p", plotnum, sep="-"))) %>% 
+  mutate(ploid=paste(drought, plotnum, sep="_"))
 
+write.csv(dp2, "C:/Users/mavolio2/Dropbox/Konza Research/p-cubed/Analyses/July 2015 Analyses/StandingBiomassforSAS.csv", row.names=F)
 
 ##correlating DP with ANPP
 cor<-biomass%>%
@@ -136,23 +138,26 @@ dpave<-dp2 %>%
 dpave2<-dp2%>%
   mutate(calendar_year=as.integer(as.character(calendar_year)))%>%
   mutate(drought2=ifelse(drought=="control", "n", "y"))%>%
-  group_by(drought2, treat, Trt)%>%
+  group_by(calendar_year, drought2, treat, Trt)%>%
   summarize(mbio=mean(canpp),
             sd=sd(canpp),
             n=length(canpp))%>%
   mutate(se=sd/sqrt(n)) %>% 
-  mutate(label=ifelse(Trt=='Control'&treat=='Recovery years'&drought2=='n', '*', ifelse(Trt=='P&N'&treat=='Recovery years'&drought2=='n','*', ifelse(treat=='Drought years'&drought2=='n', '*', ''))))
+  mutate(group=paste(drought2, Trt, sep = "_"))
+  # mutate(label=ifelse(Trt=='Control'&treat=='Recovery years'&drought2=='n', '*', ifelse(Trt=='P&N'&treat=='Recovery years'&drought2=='n','*', ifelse(treat=='Drought years'&drought2=='n', '*', ''))))
 
-ggplot(data=dpave2, aes(x=Trt, y=mbio, fill=drought2, label=label))+
-  geom_bar(stat="identity", position=position_dodge())+
-  scale_fill_manual(name="Droughted", values=c("Blue", "Orange"), labels=c("No", "Yes"))+
-  geom_errorbar(aes(ymin=mbio-se, ymax=mbio+se), position=position_dodge(0.9), width=.2)+
+ggplot(data=subset(dpave2, treat=='Recovery years'), aes(x=as.factor(calendar_year), y=mbio, color=drought2, shape=Trt, group=group))+
+  geom_point(size=4)+
+  geom_line()+
+  scale_shape_manual(name="Nutrient\nTreatment", breaks=c("Control", "P", "N", "P&N"), labels=c("Control", "P", "N", "N+P"), values=c(15, 16, 17, 18))+
+  scale_color_manual(name="Droughted", values=c("Blue", "Orange"), labels=c("No", "Yes"))+
+  geom_errorbar(aes(ymin=mbio-se, ymax=mbio+se), width=.1)+
   ylab("Standing biomass (g)")+
-  xlab("Nutrient Treatment")+
+  xlab("Year")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  scale_x_discrete(limits=c("Control", "P", "N", "P&N"), labels=c("Control", "P", "N", "N+P"))+
-  geom_text(aes(y=(mbio)+100))+
-  facet_wrap(~treat)
+  #scale_x_discrete(limits=c("Control", "P", "N", "P&N"), labels=c("Control", "P", "N", "N+P"))+
+  # geom_text(aes(y=(mbio)+100))+
+  facet_wrap(~Trt)
 
 #Figure of biomass
 biomassave<-biomass%>%
