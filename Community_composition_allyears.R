@@ -78,7 +78,7 @@ permutest(betadisp)
 #get average cover of each species in each treatment over all years (average over plots and years). 
 #join categorical triats and create trait categories
 racave<-ave%>%
-  group_by(Trt, spnum)%>%
+  group_by(Trt, genus_species)%>%
   summarize(mabund=mean(mabund))%>%
   mutate(rank=rank(-mabund, ties.method = "first"))%>%
   left_join(cattraits)%>%
@@ -97,20 +97,20 @@ racave<-ave%>%
 #make new labels for facet_wrap step  
 collabel<-c("Control"="Control", "P"="P","N"="N","P&N"="N+P")
 
-#great rac figure
-rac<-
-ggplot(data=racave, aes(x=rank, y=mabund, label=name))+
-  geom_line()+
-  geom_point(aes(color=trait_cat), size=2)+
-  scale_color_manual(name="Functional type", values=c("darkgreen", "chartreuse3", "green", "darkblue", "lightblue", "deepskyblue"), breaks = c("C4 Gram.", "C3 Gram.",  "Annual Gram.","Non-N-Fixing Forb", "N-Fixing Forb", "Annual Forb"))+
-  geom_text_repel(max.overlaps = 10, size=3)+
-  facet_wrap(~trt2, labeller = labeller(trt2=collabel))+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  ylab("Abundance")+
-  xlab("Rank")
-
-#bind both figures together.
-grid.arrange(nmds, rac)
+# #great rac figure
+# rac<-
+# ggplot(data=racave, aes(x=rank, y=mabund, label=name))+
+#   geom_line()+
+#   geom_point(aes(color=trait_cat), size=2)+
+#   scale_color_manual(name="Functional type", values=c("darkgreen", "chartreuse3", "green", "darkblue", "lightblue", "deepskyblue"), breaks = c("C4 Gram.", "C3 Gram.",  "Annual Gram.","Non-N-Fixing Forb", "N-Fixing Forb", "Annual Forb"))+
+#   geom_text_repel(max.overlaps = 10, size=3)+
+#   facet_wrap(~trt2, labeller = labeller(trt2=collabel))+
+#   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+#   ylab("Abundance")+
+#   xlab("Rank")
+# 
+# #bind both figures together.
+# grid.arrange(nmds, rac)
 
 #run RAC func code in community analyses.
 
@@ -120,23 +120,23 @@ grid.arrange(NMDS, rac_func)
 
 #plot changes over time ESA talk
 
-allpp<-read.csv(paste(my.wd, "/pplots/Sppcomp/Species Comp_to Use/Compiling Datasets in R/Spp_Data_2002_2019.csv", sep = ""))%>%
-  filter(treatment=="N1P0"|treatment=="N2P0"|treatment=="N1P3"|treatment=="N2P3")
-
-cattraits<-read.csv(paste(my.wd, "/pplots/traits_2021.csv", sep=""))%>%
-  filter(Genus!="")%>%
-  select(Genus, Species, Annual.Peren.Bi, Forb.grass.shrub, C3.C4, N.fixer..Y.N...)%>%
-  mutate(genus_species=paste(tolower(Genus), Species, sep="_"))%>%
-  rename(lifespan=Annual.Peren.Bi,
-         growthform=Forb.grass.shrub,
-         photopath=C3.C4,
-         Nfix=N.fixer..Y.N...)%>%
-  select(-Genus, -Species)
-
-#get average cover of each species in a treatment for each year of the experiment (average over the plots)
-aveall<-allpp%>%
-  group_by(calendar_year, treatment, genus_species)%>%
-  summarize(mabund=mean(abundance))
+# allpp<-read.csv(paste(my.wd, "/pplots/Sppcomp/Species Comp_to Use/Compiling Datasets in R/Spp_Data_2002_2019.csv", sep = ""))%>%
+#   filter(treatment=="N1P0"|treatment=="N2P0"|treatment=="N1P3"|treatment=="N2P3")
+# 
+# cattraits<-read.csv(paste(my.wd, "/pplots/traits_2021.csv", sep=""))%>%
+#   filter(Genus!="")%>%
+#   select(Genus, Species, Annual.Peren.Bi, Forb.grass.shrub, C3.C4, N.fixer..Y.N...)%>%
+#   mutate(genus_species=paste(tolower(Genus), Species, sep="_"))%>%
+#   rename(lifespan=Annual.Peren.Bi,
+#          growthform=Forb.grass.shrub,
+#          photopath=C3.C4,
+#          Nfix=N.fixer..Y.N...)%>%
+#   select(-Genus, -Species)
+# 
+# #get average cover of each species in a treatment for each year of the experiment (average over the plots)
+# aveall<-allpp%>%
+#   group_by(calendar_year, treatment, genus_species)%>%
+#   summarize(mabund=mean(abundance))
 
 
                      
