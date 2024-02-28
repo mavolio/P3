@@ -34,12 +34,12 @@ cattraits<-read.csv(paste(my.wd, "/pplots/traits_2021.csv", sep=""))%>%
 #get average cover of each species in a treatment for each year of the experiment (average over the plots)
 ave<-pplotcomp%>%
   filter(calendar_year<2016) %>% 
-  group_by(calendar_year, Trt, spnum, genus_species)%>%
+  group_by(calendar_year, Trt, genus_species)%>%
   summarize(mabund=mean(abundance))
 
 #make the dataset wide for vegan
 compwide<-ave%>%
-  spread(spnum, mabund, fill=0)
+  spread(genus_species, mabund, fill=0)
 
 #pull out plot info
 plots<-compwide[,1:2]
