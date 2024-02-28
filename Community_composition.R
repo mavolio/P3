@@ -8,60 +8,64 @@ library(gridExtra)
 theme_set(theme_bw(12))
 
 #set wd
-my.wd<-setwd("C:/Users/mavolio2/Dropbox/Konza Research")
-my.wd<-setwd("E:/Dropbox/Konza Research")
+setwd("C:/Users/mavolio2/Dropbox/Konza Research/")
 
 #read in data
-treats<-read.csv(paste(my.wd, "/p-cubed/Analyses/July 2015 Analyses/PPlot_PlotList.csv", sep=""))
+treats<-read.csv("p-cubed/Analyses/July 2015 Analyses/PPlot_PlotList.csv")%>% 
+  rename(plot_id=plotnum)
 
-pplotcomp<-read.csv(paste(my.wd, "/p-cubed/SpComp/pcubed_sp_data2010-2015.csv", sep = ""))%>%
-  filter(precip=="control")%>%
-  left_join(treats)
-# 
-# cattraits<-read.csv(paste(my.wd, "/pplots/traits_2021.csv", sep=""))%>%
-#   filter(Genus!="")%>%
-#   select(Genus, Species, Annual.Peren.Bi, Forb.grass.shrub, C3.C4, N.fixer..Y.N...)%>%
-#   mutate(genus_species=paste(tolower(Genus), Species, sep="_"))%>%
-#   rename(lifespan=Annual.Peren.Bi,
-#          growthform=Forb.grass.shrub,
-#          photopath=C3.C4,
-#          Nfix=N.fixer..Y.N...)%>%
-#   select(-Genus, -Species)
+pplotcomp<-read.csv("pplots\\Sppcomp\\Species Comp_to Use\\Compiling Datasets in R\\Spp_Data_2002_2021.csv") %>% 
+  left_join(treats) %>% 
+  filter(!is.na(Trt))
+
+
+cattraits<-read.csv("pplots/traits_2021.csv")%>%
+  filter(Genus!="")%>%
+  rename(spnum=Species.Number) %>% 
+  select(spnum, Genus, Species, Annual.Peren.Bi, Forb.grass.shrub, C3.C4, N.fixer..Y.N...)%>%
+  mutate(genus_species=paste(tolower(Genus), Species, sep="_"))%>%
+  rename(lifespan=Annual.Peren.Bi,
+         growthform=Forb.grass.shrub,
+         photopath=C3.C4,
+         Nfix=N.fixer..Y.N...)%>%
+  select(-Genus, -Species)
 
 #get average cover of each species in a treatment for each year of the experiment (average over the plots)
 ave<-pplotcomp%>%
-  group_by(year, Trt, genus_species)%>%
-  summarize(mabund=mean(cover))
+  filter(calendar_year<2016) %>% 
+  group_by(calendar_year, Trt, spnum, genus_species)%>%
+  summarize(mabund=mean(abundance))
 
 #make the dataset wide for vegan
 compwide<-ave%>%
   spread(genus_species, mabund, fill=0)
 
 #pull out plot info
-plots<-compwide[,1:2]
+plots<-compwide[,1:3]
 
 #run nmds
-mds<-metaMDS(compwide[,3:73])
+mds<-metaMDS(compwide[,4:91])
 mds
 
 #extract NMDS coordinates and bind to plot info for graphs
 #the label step adds the label for the first and last year of data
 scores<-plots%>%
   bind_cols(as.data.frame(mds$points))%>%
-  mutate(label=ifelse(year==2010|year==2015, as.character(year),""))
+  mutate(label=ifelse(calendar_year==2002, as.character(calendar_year),""),
+         Drought=ifelse(calendar_year>2009, "No", 'Yes'))
 
 #make figure with first and last year labeled and path between points connected
 NMDS<-
-ggplot(data=scores, aes(x=MDS1, y=MDS2, color=Trt, label=label))+
+ggplot(data=scores, aes(x=MDS1, y=MDS2, color=Trt, label=label, shape=year, group=Trt))+
   geom_point(size=3)+
   geom_path()+
-  geom_text(show.legend = F)+
+  scale_shape_manual(guide='none', values=c(2, 17))+
+  geom_label_repel(show.legend = F)+
   scale_color_manual(name="Nutrient treatment", values = c("black", "blue", "red", "purple"), breaks=c("Control", "P", "N", "P&N"), labels=c("Control", "P", "N", "N+P"))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   ylab("NMDS2")+
   xlab("NMDS1")+
-  annotate("text", x = 0.7, y = -.5, label="Stress = 0.14")+
-ggtitle("A) Community Composition")
+  annotate("text", x = 0.5, y = -.5, label="Stress = 0.18")
 
 
 #permanova
