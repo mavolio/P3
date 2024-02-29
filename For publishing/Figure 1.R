@@ -86,8 +86,8 @@ PFTcover<-pplotcomp%>%
   filter(calendar_year==2010) %>% 
   mutate(trait_cat=ifelse(growthform=="F"&lifespan=="A", "Annual Forb",
                    ifelse(growthform=="G"&lifespan=="A", "Annual Grass",
-                   ifelse(growthform=="G"&photopath=="C3", "Peren C3 Grass",
-                   ifelse(growthform=="G"&photopath=="C4", "Peren C4 Grass",
+                   ifelse(growthform=="G"&photopath=="C3", "C3 Grass",
+                   ifelse(growthform=="G"&photopath=="C4", "C4 Grass",
                    ifelse(growthform=='F'|growthform=="S"&Nfix=="N", "Non-N-Fixing Forb",
                    ifelse(growthform=='F'|growthform=="S"&Nfix=="Y", "N-Fixing Forb","UNK")))))))%>%
   left_join(treats)%>%
@@ -108,18 +108,15 @@ rac<-
 ggplot(data=racave, aes(x=rank, y=meancover))+
   geom_line()+
   geom_point(aes(color=trait_cat), size=4)+
-  scale_color_manual(name="Functional type", values=c("darkgreen", "chartreuse3", "darkolivegreen1", "darkblue", "lightblue", "deepskyblue"), breaks = c("Peren C4 Grass", "Peren C3 Grass",  "Annual Grass","Non-N-Fixing Forb", "N-Fixing Forb", "Annual Forb"))+
+  scale_color_manual(name="Functional type", values=c("darkgreen", "chartreuse3", "darkolivegreen1", "darkblue", "lightblue", "deepskyblue"), breaks = c("C4 Grass", "C3 Grass",  "Annual Grass","Non-N-Fixing Forb", "N-Fixing Forb", "Annual Forb"))+
   facet_wrap(~trt2, labeller = labeller(trt2=collabel))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   ylab("Cover")+
   xlab("Rank")+
-  ggtitle("B) Cover of plant functional types in 2010,\nthe first year of the drought treatments")
+  #ggtitle("B) Cover of plant functional types in 2010,\nthe first year of the drought treatments")+
+  theme(legend.position = "bottom")
 rac
 
 #bind both figures together.
 grid.arrange(NMDS, rac)
-
-#run RAC func code in community analyses.
-
-grid.arrange(NMDS, rac_func)
 
