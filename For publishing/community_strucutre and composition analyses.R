@@ -20,7 +20,7 @@ p3plotcomp<-read.csv("p-cubed/SpComp/pcubed_sp_data2010-2015.csv")%>%
   select(year, plotnum, spnum, genus_species, cover, precip, life, form, C3_C4, n_fixer)%>%
   rename(calendar_year=year, abundance=cover)
 
-treats<-read.csv("p-cubed/Analyses/July 2015 Analyses/PPlot_PlotList.csv")
+treats<-read.csv("p-cubed/Analyses/July 2015 Analyses/PPlot_PlotList.csv") 
 
 comp<-p3plotcomp%>%
   select(calendar_year, plotnum, spnum, genus_species, abundance, precip)%>%
@@ -113,7 +113,7 @@ ggplot(data=multdiff_means2, aes(x=Trt, y=mean, label=label))+
   geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.1)+
   scale_x_discrete(limits=c("Control", "P", "N", "P&N"), label=c("Control", "P", "N", "N+P"))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  ylab("Euclidean distance between centriods of\ndroughted and un-droughted subplots")+
+  ylab("Euclidean distance between\ndroughted and un-droughted subplots")+
   xlab("Nutrient Treatment")+
   facet_wrap(~treat)+
   geom_text(aes(y=mean+se+0.05))+
@@ -129,7 +129,7 @@ lf<-p3plotcomp%>%
   filter(spnum<990) %>% #omits unknowns
 mutate(trait_cat=ifelse(form=="F"&life=="A", "Annual Forb",
                  ifelse(form=="G"&life=="A", "Annual Grass",
-                 ifelse(form=="G"&C3_C4=="C3", "C3 Gram.",
+                 ifelse(form=="G"&C3_C4=="C3", "C3 Grass",
                  ifelse(form=="G"&C3_C4=="C4", "C4 Grass",
                  ifelse(form=='F'|form=="S"&n_fixer=="N", "Non-N-Fixing Forb",
                  ifelse(form=='F'|form=="S"&n_fixer=="Y", "N-Fixing Forb","UNK")))))))%>%
@@ -177,23 +177,42 @@ lfave<-lf_stat%>%
             n=length(cov))%>%
   mutate(se=sd/sqrt(n)) %>% 
   mutate(trt2=factor(Trt, levels=c("Control", "P", "N", "P&N"), labels=c("Control", "P", "N", "N+P"))) %>% 
-  mutate(label=ifelse())
+  group_by(treat, Trt, trait_cat, year) %>% 
+  mutate(y=max(mcov)) %>% 
+  mutate(label=ifelse(drought=="n"&treat=="Drought years"&Trt=="N"&trait_cat=="C3 Grass"&year==2010, "*", 
+              ifelse(drought=="n"&treat=="Drought years"&Trt=="N"&trait_cat=="C4 Grass"&year==2010, "*", 
+              ifelse(drought=="n"&treat=="Drought years"&Trt=="P"&trait_cat=="C3 Grass"&year==2011, '*',
+              ifelse(drought=="n"&treat=="Drought years"&Trt=="N"&trait_cat=="Non-N-Fixing Forb"&year==2011, '*',
+              ifelse(drought=="n"&treat=="Drought years"&Trt=="P&N"&trait_cat=="Non-N-Fixing Forb"&year==2011, '*',
+              ifelse(drought=="n"&treat=="Drought years"&Trt=="N"&trait_cat=="C4 Grass"&year==2012, '*', 
+              ifelse(drought=="n"&treat=="Drought years"&Trt=="P"&trait_cat=="C4 Grass"&year==2012, '*', 
+              ifelse(drought=="n"&treat=="Drought years"&Trt=="P&N"&trait_cat=="C4 Grass"&year==2012, '*', 
+              ifelse(drought=="n"&treat=="Recovery years"&Trt=="P&N"&trait_cat=="Annual Grass"&year==2013,'*', 
+              ifelse(drought=="n"&treat=="Recovery years"&Trt=="N"&trait_cat=="C3 Grass"&year==2013, '*', 
+              ifelse(drought=="n"&treat=="Recovery years"&Trt=="P"&trait_cat=="C3 Grass"&year==2014, '*', 
+              ifelse(drought=="n"&treat=="Recovery years"&Trt=="N"&trait_cat=="C4 Grass"&year==2014, '*', 
+              ifelse(drought=="n"&treat=="Recovery years"&Trt=="N"&trait_cat=="Non-N-Fixing Forb"&year==2014, '*',
+              ifelse(drought=="n"&treat=="Recovery years"&Trt=="P&N"&trait_cat=="C3 Grass"&year==2015, '*', 
+              ifelse(drought=="n"&treat=="Recovery years"&Trt=="N"&trait_cat=="C4 Grass"&year==2015, '*', 
+              ifelse(drought=="n"&treat=="Recovery years"&Trt=="P&N"&trait_cat=="Non-N-Fixing Forb"&year==2015, '*', "")))))))))))))))))
 
 
 #figure for the paper
-ggplot(data=subset(lfave), aes(x=as.factor(year), y=mcov, color=drought))+
+ggplot(data=subset(lfave), aes(x=as.factor(year), y=mcov, color=drought, label=label))+
   geom_rect(data=NULL,aes(xmin=3.5,xmax=6.56,ymin=-Inf,ymax=Inf),
             fill="lightgray", color="lightgray")+
   geom_point()+
   geom_line(aes(group=drought))+
   scale_color_manual(name="Droughted", values=c("Blue", "Orange"), labels=c("No", "Yes"))+
   geom_errorbar(aes(ymin=mcov-se, ymax=mcov+se), width=.2)+
-  ylab('Total Cover')+
+  ylab('Cover')+
   xlab("Year")+
   scale_x_discrete(labels=c("'10", "'11", "'12","'13", "'14", "'15"))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   geom_vline(xintercept=3.5)+
+  geom_text(aes(y=y+14), color="red", size=5)+
   facet_grid(trait_cat~trt2, scales='free')
+  
 
 
 # ##making figure through time of life forms
