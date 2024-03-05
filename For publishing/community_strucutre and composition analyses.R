@@ -161,12 +161,12 @@ anova(lfcov.d, ddf="Kenward-Roger")
 
 #doing contrasts
 em<-emmeans(lfcov.d, pairwise~precip|Trt|trait_cat|year, adjust="tukey")
-emmeans(lfcov.d, pairwise~Trt|year|trait_cat|precip, adjust="tukey")
+emmeans(lfcov.d, pairwise~year|Trt|trait_cat|precip, adjust="tukey")
 
 lfcov.r <- lmer(cov~Trt*precip*trait_cat*year +  (1|plot/precip/year) + (1|plot:year)+ (1|plot:precip:trait_cat) + (1|plot:trait_cat) + (1|plot:year:trait_cat), data=subset(lf_stat, treat=="Recovery years"))
 anova(lfcov.r, ddf="Kenward-Roger")
 emmeans(lfcov.r, pairwise~precip|Trt|trait_cat|year, adjust="tukey")
-emmeans(lfcov.r, pairwise~Trt|year|trait_cat|precip, adjust="tukey")
+emmeans(lfcov.r, pairwise~year|Trt|trait_cat|precip, adjust="tukey")
 
 
 lfave<-lf_stat%>%
@@ -198,7 +198,7 @@ lfave<-lf_stat%>%
               ifelse(drought=="n"&treat=="Recovery years"&Trt=="N"&trait_cat=="Non-N-Fixing Forb"&year==2014, '*',
               ifelse(drought=="n"&treat=="Recovery years"&Trt=="P&N"&trait_cat=="C3 Grass"&year==2015, '*', 
               ifelse(drought=="n"&treat=="Recovery years"&Trt=="N"&trait_cat=="C4 Grass"&year==2015, '*', 
-              ifelse(drought=="n"&treat=="Recovery years"&Trt=="P&N"&trait_cat=="Non-N-Fixing Forb"&year==2015, '*', "")))))))))))))))))))
+              ifelse(drought=="n"&treat=="Recovery years"&Trt=="P&N"&trait_cat=="Non-N-Fixing Forb"&year==2015, '*', ""))))))))))))))))))) 
 
 
 #figure for the paper
