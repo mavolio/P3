@@ -16,7 +16,8 @@ treats<-read.csv("p-cubed/Analyses/July 2015 Analyses/PPlot_PlotList.csv")%>%
 
 pplotcomp<-read.csv("pplots\\Sppcomp\\Species Comp_to Use\\Compiling Datasets in R\\Spp_Data_2002_2021.csv") %>% 
   left_join(treats) %>% 
-  filter(!is.na(Trt))
+  filter(!is.na(Trt)) %>% 
+  mutate(spnum=ifelse(genus_species=='solidago_canadensis', 533, spnum))
 
 
 cattraits<-read.csv("pplots/traits_2021.csv")%>%
@@ -81,7 +82,7 @@ permutest(betadisp)
 #get average cover of each species in each treatment over all years (average over plots and years). 
 
 PFTcover<-pplotcomp%>%
-  left_join(cattraits) %>% 
+  left_join(cattraits, by="spnum") %>% 
   filter(spnum<900) %>% 
   filter(calendar_year==2010) %>% 
   mutate(trait_cat=ifelse(growthform=="F"&lifespan=="A", "Annual Forb",
@@ -111,10 +112,8 @@ ggplot(data=racave, aes(x=rank, y=meancover))+
   scale_color_manual(name="Functional type", values=c("darkgreen", "chartreuse3", "darkolivegreen1", "darkblue", "lightblue", "deepskyblue"), breaks = c("C4 Grass", "C3 Grass",  "Annual Grass","Non-N-Fixing Forb", "N-Fixing Forb", "Annual Forb"))+
   facet_wrap(~trt2, labeller = labeller(trt2=collabel))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  ylab("Cover")+
-  xlab("Rank")+
-  #ggtitle("B) Cover of plant functional types in 2010,\nthe first year of the drought treatments")+
-  theme(legend.position = "bottom")
+  ylab("Cover (%)")+
+  xlab("Rank")
 rac
 
 #bind both figures together.
