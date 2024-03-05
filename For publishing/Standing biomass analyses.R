@@ -24,7 +24,7 @@ dp2014<-read.csv("C:/Users/mavolio2/Dropbox/Konza Research/P-cubed/DiscPasture/p
 dp2015<-read.csv("C:/Users/mavolio2/Dropbox/Konza Research/P-cubed/DiscPasture/p_cubed_disc_2015.csv")%>%
   select(Year, plot, row, type, disc)
 
-dp<-rbind(dp2011, dp2013, dp2014, dp2015)
+dp<-rbind(dp2011, dp2013, dp2015)
 
 dp2<-merge(dp, treats, by=c("plot", "row"))%>%
   select(-rep)%>%
@@ -48,12 +48,12 @@ hist(log(dp2$canpp))
 #one way anova in drought year
 m.drt_dp <- lmer(log(canpp)~Trt*drought + (1|plot), data=subset(dp2, treat=="Drought years"))
 anova(m.drt_dp, ddf="Kenward-Roger")
-emmeans(m.drt_dp, pairwise~Trt, adjust="holm")
+emmeans(m.drt_dp, pairwise~Trt, adjust="tukey")
 
-m.rec_dp <- lmer(log(canpp)~Trt*drought*year + (1|plot)+(1|plot:drought) + (1|plot:year), data=subset(dp2, treat=="Recovery years"))
+tm.rec_dp <- lmer(log(canpp)~Trt*drought*year + (1|plot)+(1|plot:drought) + (1|plot:year), data=subset(dp2, treat=="Recovery years"))
 anova(m.rec_dp, ddf="Kenward-Roger")
 
-emmeans(m.rec_dp, pairwise~Trt, adjust="holm")
+emmeans(m.rec_dp, pairwise~Trt, adjust="tukey")
 
 #Figure of standing biomass
 dpave2<-dp2%>%
@@ -64,13 +64,13 @@ dpave2<-dp2%>%
             sd=sd(canpp),
             n=length(canpp))%>%
   mutate(se=sd/sqrt(n)) %>% 
-  mutate(label=ifelse(treat=='Drought years'&Trt=="Control"&drought2=='n', "C",
-                      ifelse(treat=='Drought years'&Trt=='P'&drought2=='n', 'BC',
-                             ifelse(treat=='Drought years'&Trt=="N"&drought2=='n', "AB",
-                                    ifelse(treat=='Drought years'&Trt=='P&N'&drought2=='n'|treat=='Recovery years'&Trt=='P&N'&drought2=='n', 'A', 
-                                           ifelse(treat=='Recovery years'&Trt=="Control"&drought2=='n', 'B', ifelse(treat=='Drought years'&Trt=="N"&drought2=='n'|treat=='Recovery years'&Trt=='P'&drought2=='n'|treat=='Recovery years'&Trt=="N"&drought2=='n', "AB", "")))))))
+  mutate(label=ifelse(treat=='Drought years'&Trt=="Control"&drought2=='n'|treat=='Recovery years'&Trt=="Control"&drought2=='n', "C",
+               ifelse(treat=='Drought years'&Trt=='P'&drought2=='n', 'BC',
+               ifelse(treat=='Drought years'&Trt=="N"&drought2=='n', 'AB',
+               ifelse(treat=='Drought years'&Trt=='P&N'&drought2=='n'|treat=='Recovery years'&Trt=='P&N'&drought2=='n', 'A', 
+               ifelse(treat=='Recovery years'&Trt=="P"&drought2=='n'|treat=='Recovery years'&Trt=="N"&drought2=='n', 'B', ""))))))
 
-collabel<-c("Drought years"="Drought year (2011)", 'Recovery years' = 'Recovery years')
+collabel<-c("Drought years"="Drought year (2011)", 'Recovery years' = 'Recovery years (2013, 2015)')
 
 ggplot(data=subset(dpave2), aes(x=Trt, y=mbio, fill=drought2, label=label))+
   geom_bar(stat="identity", position=position_dodge(0.9))+
