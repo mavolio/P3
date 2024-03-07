@@ -50,7 +50,7 @@ m.drt_dp <- lmer(log(canpp)~Trt*drought + (1|plot), data=subset(dp2, treat=="Dro
 anova(m.drt_dp, ddf="Kenward-Roger")
 emmeans(m.drt_dp, pairwise~Trt, adjust="tukey")
 
-tm.rec_dp <- lmer(log(canpp)~Trt*drought*year + (1|plot)+(1|plot:drought) + (1|plot:year), data=subset(dp2, treat=="Recovery years"))
+m.rec_dp <- lmer(log(canpp)~Trt*drought*year + (1|plot)+(1|plot:drought) + (1|plot:year), data=subset(dp2, treat=="Recovery years"))
 anova(m.rec_dp, ddf="Kenward-Roger")
 
 emmeans(m.rec_dp, pairwise~Trt, adjust="tukey")
