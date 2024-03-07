@@ -302,8 +302,8 @@ sm.12nocor2<-sm.12nocor%>%
 small<-sm.clean2010%>%
   bind_rows(sm.clean11, sm.12nocor2)
 
-m<-lmer(SoilMoist~Precip*as.factor(year) + (1|plot.id), data=small)
-anova(m)
+# m<-lmer(SoilMoist~Precip*as.factor(year) + (1|plot.id), data=small)
+# anova(m)
 
 ##overall effect
 
