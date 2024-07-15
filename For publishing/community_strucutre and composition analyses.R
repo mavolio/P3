@@ -160,13 +160,23 @@ lfcov.d <- lmer(cov~Trt*precip*trait_cat*year + (1|plot/precip/year) + (1|plot:y
 anova(lfcov.d, ddf="Kenward-Roger")
 
 #doing contrasts
-em<-emmeans(lfcov.d, pairwise~precip|Trt|trait_cat|year, adjust="tukey")
-emmeans(lfcov.d, pairwise~year|Trt|trait_cat|precip, adjust="tukey")
+edy<-emmeans(lfcov.d, pairwise~year|Trt|trait_cat|precip, adjust="tukey")
+e1<-as.data.frame(edy$contrasts)
+write.csv(e1, "C:/Users/mavolio2/Dropbox/Konza Research/p-cubed/emmeans_drtyear_yearcomparision.csv", row.names = F)
+
+edd<-emmeans(lfcov.d, pairwise~precip|Trt|trait_cat|year, adjust="tukey")
+e2<-as.data.frame(edd$contrasts)
+write.csv(e2, "C:/Users/mavolio2/Dropbox/Konza Research/p-cubed/emmeans_drtyear_drtcomparision.csv", row.names = F)
 
 lfcov.r <- lmer(cov~Trt*precip*trait_cat*year +  (1|plot/precip/year) + (1|plot:year)+ (1|plot:precip:trait_cat) + (1|plot:trait_cat) + (1|plot:year:trait_cat), data=subset(lf_stat, treat=="Recovery years"))
 anova(lfcov.r, ddf="Kenward-Roger")
-emmeans(lfcov.r, pairwise~precip|Trt|trait_cat|year, adjust="tukey")
-emmeans(lfcov.r, pairwise~year|Trt|trait_cat|precip, adjust="tukey")
+erd<-emmeans(lfcov.r, pairwise~precip|Trt|trait_cat|year, adjust="tukey")
+e3<-as.data.frame(erd$contrasts)
+write.csv(e3, "C:/Users/mavolio2/Dropbox/Konza Research/p-cubed/emmeans_recyear_drtcomparision.csv", row.names = F)
+
+ery<-emmeans(lfcov.r, pairwise~year|Trt|trait_cat|precip, adjust="tukey")
+e4<-as.data.frame(ery$contrasts)
+write.csv(e4, "C:/Users/mavolio2/Dropbox/Konza Research/p-cubed/emmeans_recyear_yearcomparision.csv", row.names = F)
 
 
 lfave<-lf_stat%>%
@@ -209,7 +219,7 @@ ggplot(data=lfave, aes(x=as.factor(year), y=mcov, color=drought, label=label))+
   geom_line(aes(group=drought))+
   scale_color_manual(name="Droughted", values=c("Blue", "Orange"), labels=c("No", "Yes"))+
   geom_errorbar(aes(ymin=mcov-se, ymax=mcov+se), width=.2)+
-  ylab('Cover')+
+  ylab('Summed Cover')+
   xlab("Year")+
   scale_x_discrete(labels=c("'10", "'11", "'12","'13", "'14", "'15"))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
