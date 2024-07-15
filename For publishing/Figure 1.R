@@ -5,7 +5,7 @@ library(tidyverse)
 library(ggrepel)
 library(gridExtra)
 
-theme_set(theme_bw(12))
+theme_set(theme_bw(16))
 
 #set wd
 setwd("C:/Users/mavolio2/Dropbox/Konza Research/")
@@ -58,7 +58,7 @@ scores<-plots%>%
 #make figure with first and last year labeled and path between points connected
 NMDS<-
 ggplot(data=scores, aes(x=MDS1, y=MDS2, color=Trt, fill=label, shape=Drought, group=Trt))+
-  geom_point(size=3)+
+  geom_point(size=4)+
   geom_path()+
   scale_shape_manual(name="Year in\nDrought experiment", values=c(21, 15, 17))+
   scale_fill_manual(guide=F, values = c('white', 'gray'))+
@@ -112,7 +112,7 @@ ggplot(data=racave, aes(x=rank, y=meancover))+
   scale_color_manual(name="Functional type", values=c("darkgreen", "chartreuse3", "darkolivegreen1", "darkblue", "lightblue", "deepskyblue"), breaks = c("C4 Grass", "C3 Grass",  "Annual Grass","Non-N-Fixing Forb", "N-Fixing Forb", "Annual Forb"))+
   facet_wrap(~trt2, labeller = labeller(trt2=collabel))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  ylab("Cover (%)")+
+  ylab("Summed Cover")+
   xlab("Rank")
 rac
 
