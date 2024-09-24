@@ -66,8 +66,7 @@ ggplot(data=scores, aes(x=MDS1, y=MDS2, color=Trt, fill=label, shape=Drought, gr
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   ylab("NMDS2")+
   xlab("NMDS1")+
-  annotate("text", x = 0.9, y = -.5, label="Stress = 0.18")+
-  ggtitle("A) Community compopostion over the\n14-year nutrient addition  experiment")
+  annotate("text", x = 0.9, y = -.5, label="Stress = 0.18")
 NMDS
 
 #permanova
@@ -112,7 +111,7 @@ ggplot(data=racave, aes(x=rank, y=meancover))+
   scale_color_manual(name="Functional type", values=c("darkgreen", "chartreuse3", "darkolivegreen1", "darkblue", "lightblue", "deepskyblue"), breaks = c("C4 Grass", "C3 Grass",  "Annual Grass","Non-N-Fixing Forb", "N-Fixing Forb", "Annual Forb"))+
   facet_wrap(~trt2, labeller = labeller(trt2=collabel))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  ylab("Summed Cover")+
+  ylab("Cover")+
   xlab("Rank")
 rac
 
