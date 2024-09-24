@@ -113,7 +113,7 @@ ggplot(data=multdiff_means2, aes(x=Trt, y=mean, label=label))+
   geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.1)+
   scale_x_discrete(limits=c("Control", "P", "N", "P&N"), label=c("Control", "P", "N", "N+P"))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  ylab("Euclidean distance between\ndroughted and un-droughted subplots")+
+  ylab("Euclidean distance between\ndroughted and non-droughted subplots")+
   xlab("Nutrient Treatment")+
   facet_wrap(~treat)+
   geom_text(aes(y=mean+se+0.05))+
