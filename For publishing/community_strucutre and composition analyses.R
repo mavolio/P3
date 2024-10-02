@@ -29,6 +29,13 @@ comp<-p3plotcomp%>%
          unidt=paste(Trt, precip, sep="_"),
          unid3=paste(plotnum, Trt, precip, sep="_"))
 
+#for public data
+comp2<-comp %>% 
+  filter(precip=='drought') %>% 
+  select(-ForPCube, -unid, -unidt, -unid3)
+write.csv(comp2, 'C:\\Users\\mavolio2\\Dropbox\\Konza Research\\P-cubed\\Public data\\SpeciesCompDroughtSubplots.csv', row.names = F)
+
+
 ##looking at richness and evenness for structure analyses
           
 richeven<-community_structure(comp, time.var="calendar_year", abundance.var="abundance", replicate.var = "unid")%>%

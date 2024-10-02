@@ -37,9 +37,11 @@ dp2<-merge(dp, treats, by=c("plot", "row"))%>%
   rename(calendar_year=Year, treat=treatment, canpp=anpp, drought=type) %>% 
   mutate(year=as.factor(calendar_year)) %>% 
   mutate(plot=as.factor(paste("p", plotnum, sep="-"))) %>% 
-  mutate(ploid=paste(drought, plotnum, sep="_"))
+  mutate(ploid=paste(drought, plotnum, sep="_")) %>% 
+  select(-disc, -sqrt.hgt)
 
 # write.csv(dp2, "C:/Users/mavolio2/Dropbox/Konza Research/p-cubed/Analyses/July 2015 Analyses/StandingBiomassforSAS.csv", row.names=F)
+write.csv(dp2, "C:\\Users\\mavolio2\\Dropbox\\Konza Research\\P-cubed\\Public data\\StandingBiomassforPublication.csv", row.names=F)
 
 
 ###Running a two-way repeated measures anova with Nutrient treatment, drought treatment, and year as fixes effects
