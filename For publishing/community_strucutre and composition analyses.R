@@ -217,6 +217,15 @@ lfave<-lf_stat%>%
               ifelse(drought=="n"&treat=="Recovery years"&Trt=="N"&trait_cat=="C4 Grass"&year==2015, '*', 
               ifelse(drought=="n"&treat=="Recovery years"&Trt=="P&N"&trait_cat=="Non-N-Fixing Forb"&year==2015, '*', ""))))))))))))))))))) 
 
+#none of this is working!
+# my_labs <- as_labeller(c('C4 Grass' = 'C[4] Grass', 
+#                              'C3 Grass' = 'C[3] Grass', 
+#                              'Annual Grass' = "Annual Grass", 
+#                              'Non-N-Fixing Forb' = "Non-N-Fixing Forb", 
+#                              'N-Fixing Forb' = "N-Fixing Forb", 
+#                              'Annual Forb' = "Annual Forb"),
+#                            default = label_parsed)
+
 
 #figure for the paper
 ggplot(data=lfave, aes(x=as.factor(year), y=mcov, color=drought, label=label))+
@@ -226,7 +235,7 @@ ggplot(data=lfave, aes(x=as.factor(year), y=mcov, color=drought, label=label))+
   geom_line(aes(group=drought))+
   scale_color_manual(name="Droughted", values=c("Blue", "Orange"), labels=c("No", "Yes"))+
   geom_errorbar(aes(ymin=mcov-se, ymax=mcov+se), width=.2)+
-  ylab('Summed Cover')+
+  ylab('Cover of Species Within a Functional Type')+
   xlab("Year")+
   scale_x_discrete(labels=c("'10", "'11", "'12","'13", "'14", "'15"))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
@@ -234,6 +243,7 @@ ggplot(data=lfave, aes(x=as.factor(year), y=mcov, color=drought, label=label))+
   geom_text(aes(y=y+15), color="red", size=5)+
   facet_grid(cat2~trt2, scales='free')
   
+
 #focusing on three cover types
 ggplot(data=subset(lfave, cat2=='Non-N-Fixing Forb'&drought=='y'|cat2=='C4 Grass'&drought=='y'|cat2=='C3 Grass'&drought=='y'), aes(x=as.factor(year), y=mcov, color=Trt))+
   geom_rect(data=NULL,aes(xmin=3.5,xmax=6.56,ymin=-Inf,ymax=Inf),
