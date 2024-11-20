@@ -108,12 +108,13 @@ rac<-
 ggplot(data=racave, aes(x=rank, y=meancover))+
   geom_line()+
   geom_point(aes(color=trait_cat), size=4)+
-  scale_color_manual(name="Functional type", values=c("darkgreen", "chartreuse3", "darkolivegreen1", "darkblue", "lightblue", "deepskyblue"), breaks = c("C4 Grass", "C3 Grass",  "Annual Grass","Non-N-Fixing Forb", "N-Fixing Forb", "Annual Forb"))+
+  scale_color_manual(name="Functional type", values=c("darkgreen", "chartreuse3", "darkolivegreen1", "darkblue", "lightblue", "deepskyblue"), breaks = c("C4 Grass", "C3 Grass",  "Annual Grass","Non-N-Fixing Forb", "N-Fixing Forb", "Annual Forb"), labels=c(bquote('C'[4]~'Grass'), bquote('C'[3]~'Grass'),"Annual Grass","Non-N-Fixing Forb", "N-Fixing Forb", "Annual Forb"))+
   facet_wrap(~trt2, labeller = labeller(trt2=collabel))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   ylab("Cover")+
   xlab("Rank")
 rac
+
 
 #bind both figures together.
 grid.arrange(NMDS, rac)
