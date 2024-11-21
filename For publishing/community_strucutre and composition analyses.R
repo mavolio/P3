@@ -115,7 +115,7 @@ multdiff_means2<-multdiff%>%
   mutate(se=sd/sqrt(6))%>%
   mutate(label=ifelse(treat=="Drought years", "A", ifelse(treat=="Recovery years"&Trt=="Control", "B", ifelse(treat=="Recovery years"&Trt=="P&N", "A", "AB"))))
   
-ggplot(data=multdiff_means2, aes(x=Trt, y=mean, label=label))+
+Fig3<-ggplot(data=multdiff_means2, aes(x=Trt, y=mean, label=label))+
   geom_bar(stat='identity', size=3, fill="gray")+
   geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.1)+
   scale_x_discrete(limits=c("Control", "P", "N", "P&N"), label=c("Control", "P", "N", "N+P"))+
@@ -125,6 +125,8 @@ ggplot(data=multdiff_means2, aes(x=Trt, y=mean, label=label))+
   facet_wrap(~treat)+
   geom_text(aes(y=mean+se+0.05))+
   theme(plot.title = element_text(hjust=-0.1, vjust = -8))
+
+ggsave('C:\\Users\\mavolio2\\OneDrive - Johns Hopkins\\Manuscripts\\P3\\Submit Oecologia\\Figures\\gg_Figure3.jpg', plot = Fig3, device = jpeg, width = 6.5, height=4, units="in", dpi=600)
 
 
 ##looking at cover of functional types over time
@@ -195,7 +197,7 @@ lfave<-lf_stat%>%
             n=length(cov))%>%
   mutate(se=sd/sqrt(n)) %>% 
   mutate(trt2=factor(Trt, levels=c("Control", "P", "N", "P&N"), labels=c("Control", "P", "N", "N+P")),
-         cat2=factor(trait_cat, levels=c('C4 Grass', 'C3 Grass', 'Annual Grass', 'Non-N-Fixing Forb', 'N-Fixing Forb', 'Annual Forb'))) %>% 
+         cat2=factor(trait_cat, levels=c('C4 Grass', 'C3 Grass', 'Annual Grass', 'Non-N-Fixing Forb', 'N-Fixing Forb', 'Annual Forb'), labels=c("'C'[4]*' Grass'", "'C'[3]*' Grass'", 'Annual~Grass', "Non-N-Fixing~Forb", "N-Fixing~Forb","Annual~Forb"))) %>% 
   group_by(treat, Trt, trait_cat, year) %>% 
   mutate(y=max(mcov)) %>% 
   mutate(label=ifelse(drought=="n"&treat=="Drought years"&Trt=="N"&trait_cat=="C3 Grass"&year==2010, "*", 
@@ -217,15 +219,6 @@ lfave<-lf_stat%>%
               ifelse(drought=="n"&treat=="Recovery years"&Trt=="N"&trait_cat=="C4 Grass"&year==2015, '*', 
               ifelse(drought=="n"&treat=="Recovery years"&Trt=="P&N"&trait_cat=="Non-N-Fixing Forb"&year==2015, '*', ""))))))))))))))))))) 
 
-#none of this is working!
-# my_labs <- as_labeller(c('C4 Grass' = 'C[4] Grass', 
-#                              'C3 Grass' = 'C[3] Grass', 
-#                              'Annual Grass' = "Annual Grass", 
-#                              'Non-N-Fixing Forb' = "Non-N-Fixing Forb", 
-#                              'N-Fixing Forb' = "N-Fixing Forb", 
-#                              'Annual Forb' = "Annual Forb"),
-#                            default = label_parsed)
-
 
 #figure for the paper
 ggplot(data=lfave, aes(x=as.factor(year), y=mcov, color=drought, label=label))+
@@ -238,10 +231,10 @@ ggplot(data=lfave, aes(x=as.factor(year), y=mcov, color=drought, label=label))+
   ylab('Cover of Species Within a Functional Type')+
   xlab("Year")+
   scale_x_discrete(labels=c("'10", "'11", "'12","'13", "'14", "'15"))+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = 'none')+
   geom_vline(xintercept=3.5)+
   geom_text(aes(y=y+15), color="red", size=5)+
-  facet_grid(cat2~trt2, scales='free')
+  facet_grid(cat2~trt2, scales='free', labeller = labeller(cat2=label_parsed))
   
 
 #focusing on three cover types
