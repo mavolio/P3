@@ -66,15 +66,26 @@ dpave2<-dp2%>%
             sd=sd(canpp),
             n=length(canpp))%>%
   mutate(se=sd/sqrt(n)) %>% 
+  ungroup() %>% 
   mutate(label=ifelse(treat=='Drought years'&Trt=="Control"&drought2=='n'|treat=='Recovery years'&Trt=="Control"&drought2=='n', "C",
                ifelse(treat=='Drought years'&Trt=='P'&drought2=='n', 'BC',
                ifelse(treat=='Drought years'&Trt=="N"&drought2=='n', 'AB',
                ifelse(treat=='Drought years'&Trt=='P&N'&drought2=='n'|treat=='Recovery years'&Trt=='P&N'&drought2=='n', 'A', 
-               ifelse(treat=='Recovery years'&Trt=="P"&drought2=='n'|treat=='Recovery years'&Trt=="N"&drought2=='n', 'B', ""))))))
+               ifelse(treat=='Recovery years'&Trt=="P"&drought2=='n'|treat=='Recovery years'&Trt=="N"&drought2=='n', 'B', ""))))),
+         x=ifelse(Trt=='Control'&drought2=='n', 0.75, 
+           ifelse(Trt=="P"&drought2=='n', 1.75, 
+           ifelse(Trt=="N"&drought2=='n', 2.75, 
+           ifelse(Trt=="P&N"&drought2=='n', 3.75, 2)))),
+         end=ifelse(Trt=='Control'&drought2=='n', 1.25, 
+             ifelse(Trt=="P"&drought2=='n', 2.25, 
+             ifelse(Trt=="N"&drought2=='n', 3.25, 
+             ifelse(Trt=='P&N'&drought2=='n', 4.25, 2)))),
+         yend=mbio+100, 
+         y2=ifelse(treat=='Recovery years', "", 150))
 
 collabel<-c("Drought years"="Drought year (2011)", 'Recovery years' = 'Recovery years (2013, 2015)')
 
-ggplot(data=subset(dpave2), aes(x=Trt, y=mbio, fill=drought2, label=label))+
+fig4<-ggplot(data=subset(dpave2), aes(x=Trt, y=mbio, fill=drought2, label=label))+
   geom_bar(stat="identity", position=position_dodge(0.9))+
   geom_errorbar(aes(ymin=mbio-se, ymax=mbio+se), position = position_dodge(0.9), width=0.1)+
   scale_fill_manual(name="Droughted", values=c("Blue", "Orange"), labels=c("No", "Yes"))+
@@ -83,4 +94,8 @@ ggplot(data=subset(dpave2), aes(x=Trt, y=mbio, fill=drought2, label=label))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   scale_x_discrete(limits=c("Control", "P", "N", "P&N"), labels=c("Control", "P", "N", "N+P"))+
   facet_wrap(~treat, labeller = labeller(treat=collabel))+
-  geom_text(aes(y=(mbio)+120))
+  geom_text(aes(y=(mbio)+120))+
+  geom_segment(aes(x=x, xend=end, y=yend))
+
+ggsave('C:\\Users\\mavolio2\\OneDrive - Johns Hopkins\\Manuscripts\\P3\\Submit Oecologia\\Figures\\gg_Figure4.jpg', plot = fig4, device = jpeg, width = 6.5, height=4, units="in", dpi=600)
+               
