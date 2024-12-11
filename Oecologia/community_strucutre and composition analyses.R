@@ -113,7 +113,7 @@ multdiff_means2<-multdiff%>%
   group_by(Trt, treat)%>%
   summarize(mean=mean(composition_diff), sd=sd(composition_diff))%>%
   mutate(se=sd/sqrt(6))%>%
-  mutate(label=ifelse(treat=="Drought years", "A", ifelse(treat=="Recovery years"&Trt=="Control", "B", ifelse(treat=="Recovery years"&Trt=="P&N", "A", "AB"))))
+  mutate(label=ifelse(treat=="Drought years", "", ifelse(treat=="Recovery years"&Trt=="Control", "B", ifelse(treat=="Recovery years"&Trt=="P&N", "A", "AB"))))
   
 Fig3<-ggplot(data=multdiff_means2, aes(x=Trt, y=mean, label=label))+
   geom_bar(stat='identity', size=3, fill="gray")+
